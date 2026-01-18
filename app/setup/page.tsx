@@ -1,10 +1,9 @@
 import { prisma } from '@/app/lib/prisma'
 import { redirect } from 'next/navigation'
 import { Shield } from 'lucide-react'
-import { SetupForm } from './form' // Імпортуємо форму
+import { SetupForm } from './form'
 
 export default async function SetupPage() {
-    // БЕЗПЕКА: Цей код виконується на сервері перед рендером
     const userCount = await prisma.user.count()
     if (userCount > 0) {
         redirect('/login')
@@ -25,7 +24,6 @@ export default async function SetupPage() {
                 </div>
 
                 <div className="bg-dark-800 border border-dark-700 rounded-2xl p-8 shadow-2xl">
-                    {/* Тут тепер живе наша розумна форма */}
                     <SetupForm />
                 </div>
 
