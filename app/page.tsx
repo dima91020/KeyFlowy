@@ -4,23 +4,52 @@ import { cookies } from 'next/headers'
 import {
     Shield,
     ChevronRight,
-    CheckCircle2,
     Wifi,
     Radio,
     Lock,
     Zap,
     Globe,
-    ChevronDown
+    CheckCircle2
 } from 'lucide-react'
+import React from "react";
+import ScrollDownButton from "@/app/ui/app/scroll-down-button";
 
 export default async function LandingPage() {
-    const session = (await cookies()).get('session')
-    const isLoggedIn = !!session?.value
-    const userCount = await prisma.user.count()
-    const isFirstRun = userCount === 0
-    let mainButtonLink = '/login'
-    if (isLoggedIn) mainButtonLink = '/dashboard'
-    else if (isFirstRun) mainButtonLink = '/setup'
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    const userCount = await prisma.user.count();
+
+    const isSystemEmpty = userCount === 0;
+    let isLoggedIn = false;
+
+    if (sessionToken && !isSystemEmpty) {
+        const userExists = await prisma.user.findUnique({
+            where: { id: sessionToken },
+            select: { id: true }
+        });
+        isLoggedIn = !!userExists;
+    }
+
+    let mainButtonLink = '/login';
+    let mainButtonText = 'Sign In';
+
+    if (isSystemEmpty) {
+        mainButtonLink = '/setup';
+        mainButtonText = 'Start Setup';
+    } else if (isLoggedIn) {
+        mainButtonLink = '/dashboard';
+        mainButtonText = 'Dashboard';
+    }
+
+    const renderMainButton = (className: string) => (
+        <Link
+            href={mainButtonLink}
+            className={className}
+        >
+            {mainButtonText}
+            {isLoggedIn && <ChevronRight size={16} />}
+        </Link>
+    );
 
     return (
         <div className="min-h-screen bg-dark-900 text-white flex flex-col font-sans overflow-x-hidden selection:bg-primary/30">
@@ -40,17 +69,11 @@ export default async function LandingPage() {
                             <Link href="#features" className="hover:text-white transition-colors">Features</Link>
                         </nav>
 
-                        <Link
-                            href={mainButtonLink}
-                            className={`px-4 py-2 md:px-6 md:py-2.5 rounded-lg md:rounded-xl font-medium transition-all shadow-lg flex items-center gap-2 text-sm md:text-base ${
-                                isLoggedIn
-                                    ? 'bg-dark-800 border border-dark-700 hover:bg-dark-700 text-white'
-                                    : 'bg-primary hover:bg-primary-hover text-white shadow-blue-500/20'
-                            }`}
-                        >
-                            {isLoggedIn ? 'Dashboard' : (isFirstRun ? 'Setup' : 'Sign In')}
-                            {isLoggedIn && <ChevronRight size={16} />}
-                        </Link>
+                        {renderMainButton(`px-4 py-2 md:px-6 md:py-2.5 rounded-lg md:rounded-xl font-medium transition-all shadow-lg flex items-center gap-2 text-sm md:text-base ${
+                            isLoggedIn
+                                ? 'bg-dark-800 border border-dark-700 hover:bg-dark-700 text-white'
+                                : 'bg-primary hover:bg-primary-hover text-white shadow-blue-500/20'
+                        }`)}
                     </div>
                 </div>
             </header>
@@ -78,12 +101,7 @@ export default async function LandingPage() {
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                            <Link
-                                href={mainButtonLink}
-                                className="bg-primary hover:bg-primary-hover text-white text-lg px-8 py-4 rounded-xl font-bold transition-all shadow-xl shadow-blue-500/25 text-center sm:text-left"
-                            >
-                                {isLoggedIn ? 'Open Dashboard' : (isFirstRun ? 'Start Setup' : 'Get Started')}
-                            </Link>
+                            {renderMainButton("bg-primary hover:bg-primary-hover text-white text-lg px-8 py-4 rounded-xl font-bold transition-all shadow-xl shadow-blue-500/25 text-center sm:text-left flex items-center justify-center gap-2")}
                         </div>
                     </div>
 
@@ -110,12 +128,7 @@ export default async function LandingPage() {
                     </div>
                 </div>
 
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 animate-bounce cursor-pointer hidden md:block">
-                    <Link href="#how-it-works" className="text-dark-muted hover:text-white transition-colors flex flex-col items-center gap-2">
-                        <span className="text-xs font-medium uppercase tracking-widest opacity-50">Explore</span>
-                        <ChevronDown size={32} />
-                    </Link>
-                </div>
+                <ScrollDownButton scrollToID={"how-it-works"} />
             </main>
 
             <section id="how-it-works" className="bg-dark-800/30 pt-16 pb-12 md:pt-24 border-t border-dark-700/50 relative">

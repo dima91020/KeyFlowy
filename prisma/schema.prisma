@@ -10,24 +10,30 @@ datasource db {
 
 model User {
   id        String   @id @default(cuid())
+
+  email     String?  @unique
+  password  String?
+  role      String   @default("USER")
+
   name      String?
-  email     String   @unique
-  password  String
   cardUid   String?  @unique
-  role      Role     @default(USER)
-  isActive  Boolean  @default(true)
-  logs      Log[]
+  image     String?
+  jobTitle  String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  logs      Log[]
 }
 
 model Log {
-  id         String       @id @default(cuid())
-  scannedUid String
-  status     AccessStatus
-  userId     String?
-  user       User?        @relation(fields: [userId], references: [id])
-  timestamp  DateTime     @default(now())
+  id            String   @id @default(cuid())
+  timestamp     DateTime @default(now())
+  cardUid       String
+  accessGranted Boolean
+
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 enum Role {

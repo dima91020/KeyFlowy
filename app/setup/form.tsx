@@ -61,6 +61,7 @@ export function SetupForm() {
                         <input
                             name="password"
                             type="password"
+                            autoComplete="current-password"
                             placeholder="******"
                             className={`w-full bg-dark-900 border rounded-xl pl-10 pr-4 py-3 transition-all outline-none
                 ${state.errors?.password

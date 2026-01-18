@@ -1,126 +1,129 @@
 import { prisma } from '@/app/lib/prisma'
-import { revalidatePath } from 'next/cache'
-import { Search, Plus, Edit2, Trash2, MoreVertical } from 'lucide-react'
+import { Plus, Search, Trash2, User as UserIcon, Shield } from 'lucide-react'
+import Link from 'next/link'
+import { deleteUserAction } from './actions'
+import { cookies } from 'next/headers'
 
 export default async function UsersPage() {
     const users = await prisma.user.findMany({
-        orderBy: { createdAt: 'desc' },
-        where: { role: 'USER' }
+        orderBy: { createdAt: 'desc' }
     })
 
-    async function deleteUser(formData: FormData) {
-        'use server'
-        const id = formData.get('id') as string
-
-        try {
-            await prisma.log.deleteMany({ where: { userId: id } })
-            await prisma.user.delete({ where: { id } })
-            revalidatePath('/dashboard/users')
-        } catch (e) {
-            console.error("Помилка видалення:", e)
-        }
-    }
+    const cookieStore = await cookies()
+    const currentUserId = cookieStore.get('session')?.value
 
     return (
-        <div className="space-y-6">
+        <div className="p-6 space-y-6">
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <h1 className="text-2xl font-bold text-white">Users List</h1>
-
-                <button className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-blue-500/20 font-medium">
-                    <Plus size={18} />
-                    <span>Invite User</span>
-                </button>
-            </div>
-
-            <div className="bg-dark-800 p-4 rounded-xl border border-dark-700 flex gap-4">
-                <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Search users..."
-                        className="w-full bg-dark-900 border border-dark-700 text-white rounded-lg pl-10 pr-4 py-2 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    />
+                <div>
+                    <h1 className="text-3xl font-bold text-white">Users Management</h1>
+                    <p className="text-dark-muted mt-1">Manage employees and their access cards.</p>
                 </div>
+
+                <Link
+                    href="/dashboard/users/new"
+                    className="bg-primary hover:bg-primary-hover text-white px-4 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-all shadow-lg shadow-blue-500/20"
+                >
+                    <Plus size={20} />
+                    Add Employee
+                </Link>
             </div>
 
-            <div className="bg-dark-800 rounded-xl border border-dark-700 overflow-hidden shadow-xl">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                        <tr className="border-b border-dark-700 text-dark-muted text-sm uppercase tracking-wider">
-                            <th className="p-4 font-medium">User Name</th>
-                            <th className="p-4 font-medium">Email</th>
-                            <th className="p-4 font-medium">Card UID</th>
-                            <th className="p-4 font-medium">Status</th>
-                            <th className="p-4 font-medium text-right">Action</th>
-                        </tr>
-                        </thead>
-                        <tbody className="divide-y divide-dark-700">
-                        {users.map((user) => (
-                            <tr key={user.id} className="group hover:bg-dark-700/50 transition-colors">
+            <div className="relative">
+                <Search className="absolute left-4 top-3.5 text-dark-muted" size={20} />
+                <input
+                    type="text"
+                    placeholder="Search by name, position or card UID..."
+                    className="w-full bg-dark-800 border border-dark-700 text-white rounded-xl pl-12 pr-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                />
+            </div>
 
-                                <td className="p-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                                            {user.name?.substring(0, 2).toUpperCase()}
-                                        </div>
-                                        <span className="font-medium text-white">{user.name}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {users.map((user) => {
+                    const isCurrentUser = user.id === currentUserId
+
+                    return (
+                        <div key={user.id} className="bg-dark-800 border border-dark-700 rounded-2xl p-5 hover:border-dark-600 transition-all group relative">
+
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-full bg-dark-700 flex items-center justify-center border border-dark-600 overflow-hidden">
+                                        {user.image ? (
+                                            <img src={user.image} alt={user.name || 'User'} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <UserIcon className="text-dark-muted" size={24} />
+                                        )}
                                     </div>
-                                </td>
 
-                                <td className="p-4 text-dark-muted">
-                                    {user.email || '—'}
-                                </td>
+                                    <div>
+                                        <h3 className="font-bold text-white text-lg leading-tight">
+                                            {user.name || 'Unnamed'}
+                                            {isCurrentUser && <span className="text-dark-muted text-sm font-normal ml-2">(You)</span>}
+                                        </h3>
+                                        <p className="text-sm text-dark-muted">
+                                            {user.jobTitle || 'No Job Title'}
+                                        </p>
+                                    </div>
+                                </div>
 
-                                <td className="p-4 font-mono text-primary bg-primary/10 px-2 py-1 rounded w-fit text-sm">
-                                    {user.cardUid}
-                                </td>
+                                {user.role === 'ADMIN' ? (
+                                    <span className="px-2 py-1 rounded-lg bg-purple-500/10 text-purple-400 text-xs font-bold border border-purple-500/20 flex items-center gap-1">
+                      <Shield size={10} /> ADMIN
+                  </span>
+                                ) : (
+                                    <span className="px-2 py-1 rounded-lg bg-blue-500/10 text-blue-400 text-xs font-bold border border-blue-500/20">
+                      EMPLOYEE
+                  </span>
+                                )}
+                            </div>
 
-                                <td className="p-4">
-                                    {user.isActive ? (
-                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                        Active
+                            <div className="space-y-2 bg-dark-900/50 p-3 rounded-xl border border-dark-700/50 mb-4">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-dark-muted">Card UID:</span>
+                                    <span className="font-mono text-white tracking-wider">
+                          {user.cardUid || '—'}
                       </span>
-                                    ) : (
-                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-                        Inactive
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-dark-muted">Email:</span>
+                                    <span className="text-white truncate max-w-[150px]">
+                          {user.email || '—'}
                       </span>
-                                    )}
-                                </td>
+                                </div>
+                            </div>
 
-                                <td className="p-4 text-right">
-                                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex gap-2">
+                                <Link
+                                    href={`/dashboard/users/${user.id}`}
+                                    className="flex-1 bg-dark-700 hover:bg-dark-600 text-white py-2 rounded-lg text-sm font-medium transition-colors text-center"
+                                >
+                                    Edit / View
+                                </Link>
 
-                                        <button className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors">
-                                            <Edit2 size={16} />
+                                {!isCurrentUser && (
+                                    <form action={deleteUserAction.bind(null, user.id)}>
+                                        <button
+                                            type="submit"
+                                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 p-2 rounded-lg transition-colors border border-red-500/10"
+                                            title="Delete User"
+                                        >
+                                            <Trash2 size={18} />
                                         </button>
+                                    </form>
+                                )}
+                            </div>
 
-                                        <form action={deleteUser}>
-                                            <input type="hidden" name="id" value={user.id} />
-                                            <button type="submit" className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </form>
-
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-
-                        {users.length === 0 && (
-                            <tr>
-                                <td colSpan={5} className="p-8 text-center text-dark-muted">
-                                    {`Користувачів не знайдено. Натисніть "Invite User", щоб додати.`}
-                                </td>
-                            </tr>
-                        )}
-                        </tbody>
-                    </table>
-                </div>
+                        </div>
+                    )
+                })}
             </div>
+
+            {users.length === 0 && (
+                <div className="text-center py-20 text-dark-muted">
+                    No users found. Create your first employee!
+                </div>
+            )}
         </div>
     )
 }
