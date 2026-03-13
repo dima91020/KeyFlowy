@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { prisma } from '@/app/lib/prisma'
-import { cookies } from 'next/headers'
+import { verifySession } from '@/app/lib/session'
 import {
     Shield,
     ChevronRight,
@@ -15,16 +15,15 @@ import React from "react";
 import ScrollDownButton from "@/app/ui/app/scroll-down-button";
 
 export default async function LandingPage() {
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session')?.value;
     const userCount = await prisma.user.count();
-
     const isSystemEmpty = userCount === 0;
+
+    const userId = await verifySession();
     let isLoggedIn = false;
 
-    if (sessionToken && !isSystemEmpty) {
+    if (userId && !isSystemEmpty) {
         const userExists = await prisma.user.findUnique({
-            where: { id: sessionToken },
+            where: { id: userId },
             select: { id: true }
         });
         isLoggedIn = !!userExists;

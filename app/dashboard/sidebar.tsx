@@ -2,12 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Users, FileText, Settings, LogOut, Radio } from 'lucide-react'
+// Додали Router в імпорти
+import { LayoutDashboard, Users, FileText, Settings, LogOut, Radio, Router } from 'lucide-react'
 import clsx from 'clsx'
 import { logoutAction } from '../login/actions'
 
 export const menuItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Devices', href: '/dashboard/devices', icon: Router }, // <--- НОВИЙ ПУНКТ
     { name: 'Users', href: '/dashboard/users', icon: Users },
     { name: 'Access Logs', href: '/dashboard/logs', icon: FileText },
     { name: 'Remote Control', href: '/dashboard/remote', icon: Radio },
