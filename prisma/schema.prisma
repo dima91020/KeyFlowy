@@ -19,6 +19,8 @@ model User {
   cardUid   String?  @unique
   image     String?
   jobTitle  String?
+  isActive  Boolean  @default(true)
+  isInside  Boolean  @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -26,14 +28,35 @@ model User {
   logs      Log[]
 }
 
+model Device {
+  id          String   @id @default(cuid())
+  name        String
+  macAddress  String   @unique
+  description String?
+  isOnline    Boolean  @default(false)
+  lastSeen    DateTime @default(now())
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  logs        Log[]
+}
+
 model Log {
   id            String   @id @default(cuid())
   timestamp     DateTime @default(now())
-  cardUid       String
   accessGranted Boolean
 
   userId        String?
   user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  cardUid       String
+
+  deviceId      String?
+  device        Device?  @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+
+  direction     String?
+  eventType     String?  @default("ACCESS")
 }
 
 enum Role {

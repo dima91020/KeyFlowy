@@ -1,18 +1,19 @@
 import { Sidebar } from './sidebar'
 import { MobileSidebar } from './mobile-sidebar'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/app/lib/prisma'
+import { verifySession } from '@/app/lib/session'
 
 export default async function DashboardLayout({
                                                   children,
                                               }: {
     children: React.ReactNode
 }) {
-    const cookieStore = await cookies()
-    const userId = cookieStore.get('session')?.value
+    const userId = await verifySession()
 
-    if (!userId) redirect('/login')
+    if (!userId) {
+        redirect('/login')
+    }
 
     const user = await prisma.user.findUnique({
         where: { id: userId }

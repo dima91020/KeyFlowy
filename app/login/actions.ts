@@ -1,10 +1,10 @@
 'use server'
 
 import { z } from 'zod'
-import { prisma } from '@/app/lib/prisma'
+import { prisma } from '@/app/lib/prisma' // Перевір шлях
 import { compare } from 'bcrypt'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { createSession, deleteSession } from '@/app/lib/session' // <--- Імпорт наших функцій
 
 const loginSchema = z.object({
     email: z.string().email("Invalid email address"),
@@ -52,14 +52,11 @@ export async function loginAction(prevState: LoginState, formData: FormData): Pr
             }
         }
 
-        const cookieStore = await cookies()
-        cookieStore.set('session', user.id, {
-            httpOnly: true,
-            sameSite: 'lax',
-            secure: process.env.NODE_ENV === 'production',
-            maxAge: 60 * 60 * 24 * 7,
-            path: '/',
-        })
+        // --- БУЛО: ---
+        // cookieStore.set(...)
+
+        // --- СТАЛО (Набагато чистіше і безпечніше): ---
+        await createSession(user.id)
 
     } catch (error) {
         console.error("Login Error:", error)
@@ -73,7 +70,6 @@ export async function loginAction(prevState: LoginState, formData: FormData): Pr
 }
 
 export async function logoutAction() {
-    const cookieStore = await cookies()
-    cookieStore.delete('session')
-    redirect('/login')
+    await deleteSession() // Використовуємо нашу функцію
+    redirect('/')
 }
