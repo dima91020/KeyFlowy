@@ -9,37 +9,51 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
+  id             String   @id @default(cuid())
+  email          String?  @unique
+  password       String?
+  role           Role     @default(USER)
+  name           String?
+  cardUid        String?  @unique
+  image          String?
+  jobTitle       String?
+  isActive       Boolean  @default(true)
+  isInside       Boolean  @default(false)
 
-  email     String?  @unique
-  password  String?
-  role      String   @default("USER")
+  adminId        String?
+  admin          User?    @relation("AdminToEmployee", fields: [adminId], references: [id])
+  employees      User[]   @relation("AdminToEmployee")
 
-  name      String?
-  cardUid   String?  @unique
-  image     String?
-  jobTitle  String?
-  isActive  Boolean  @default(true)
-  isInside  Boolean  @default(false)
+  ownedDevices   Device[] @relation("AdminOwnedDevices")
+  allowedDevices Device[] @relation("DeviceAccess")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  logs           Log[]
 
-  logs      Log[]
+  validFrom      DateTime?
+  validUntil     DateTime?
 }
 
 model Device {
-  id          String   @id @default(cuid())
-  name        String
-  macAddress  String   @unique
-  description String?
-  isOnline    Boolean  @default(false)
-  lastSeen    DateTime @default(now())
+  id           String   @id @default(cuid())
+  name         String
+  macAddress   String   @unique
+  description  String?
+  isOnline     Boolean  @default(false)
+  lastSeen     DateTime @default(now())
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  relayTime   Int      @default(5)
+  relayType   String   @default("NO")
 
-  logs        Log[]
+  adminId      String
+  admin        User     @relation("AdminOwnedDevices", fields: [adminId], references: [id], onDelete: Cascade)
+
+  allowedUsers User[]   @relation("DeviceAccess")
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  logs         Log[]
 }
 
 model Log {
@@ -50,18 +64,29 @@ model Log {
   userId        String?
   user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  userName      String?
+  userRole      Role?
   cardUid       String
 
   deviceId      String?
   device        Device?  @relation(fields: [deviceId], references: [id], onDelete: SetNull)
-
   direction     String?
   eventType     String?  @default("ACCESS")
 }
 
+model PasswordResetToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
+
 enum Role {
-  USER
   ADMIN
+  USER
+  GUEST
 }
 
 enum AccessStatus {

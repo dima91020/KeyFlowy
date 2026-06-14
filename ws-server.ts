@@ -1,27 +1,36 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { PrismaClient } from '@prisma/client';
 
-// 1. Ініціалізація
-const wss = new WebSocketServer({ port: 8080 });
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 8080;
+const wss = new WebSocketServer({ port: PORT });
 const prisma = new PrismaClient();
 
-console.log('🚀 Smart IoT Server started on port 8080');
+async function resetDeviceStatus() {
+    try {
+        await prisma.device.updateMany({
+            data: { isOnline: false }
+        });
+        console.log('🔄 All devices reset to OFFLINE status on boot.');
+    } catch (error) {
+        console.error('❌ Failed to reset device statuses:', error);
+    }
+}
+resetDeviceStatus();
 
-// Розширюємо стандартний тип WebSocket, щоб додати прапорець isAlive та MAC
 interface ExtWebSocket extends WebSocket {
     isAlive: boolean;
-    deviceMac?: string; // Зберігаємо MAC прямо в сокеті для зручності
+    deviceMac?: string;
 }
 
-// "Телефонна книга": зберігаємо зв'язок MAC -> WebSocket
 const devices = new Map<string, ExtWebSocket>();
 
-// --- ТИПИ ПОВІДОМЛЕНЬ ---
+const pendingRemoteUnlocks = new Map<string, { userId: string, direction: string }>();
+
 type RegisterMessage = { type: 'REGISTER'; mac: string; };
 type AccessCheckMessage = { type: 'ACCESS_CHECK'; mac: string; payload: string; direction?: string; };
 type DoorEventMessage = { type: 'DOOR_EVENT'; mac: string; payload: string; };
 type EventMessage = { type: 'EVENT'; mac: string; payload: string; direction?: string; };
-type CommandMessage = { type: 'COMMAND'; target: string; command: string; };
+type CommandMessage = { type: 'COMMAND'; target: string; command: string; userId: string; };
 type PassageConfirmedMessage = { type: 'PASSAGE_CONFIRMED'; mac: string; payload: string; direction?: string; };
 type IntrusionAlertMessage = { type: 'INTRUSION_ALERT'; mac: string; };
 
@@ -34,8 +43,9 @@ function isIotMessage(obj: unknown): obj is IotMessage {
     return ['REGISTER', 'ACCESS_CHECK', 'EVENT', 'COMMAND', 'DOOR_EVENT', 'PASSAGE_CONFIRMED', 'INTRUSION_ALERT'].includes(record.type);
 }
 
-// --- HEARTBEAT (Перевірка життя) ---
-const interval = setInterval(() => {
+const interval = setInterval(async () => {
+    const activeMacs: string[] = [];
+
     (wss.clients as Set<ExtWebSocket>).forEach((ws) => {
         if (!ws.isAlive) {
             console.log(`💀 Found dead connection: ${ws.deviceMac || 'unknown'}`);
@@ -43,14 +53,27 @@ const interval = setInterval(() => {
         }
         ws.isAlive = false;
         ws.ping();
+
+        if (ws.deviceMac) {
+            activeMacs.push(ws.deviceMac);
+        }
     });
-}, 30000);
+
+    if (activeMacs.length > 0) {
+        try {
+            await prisma.device.updateMany({
+                where: { macAddress: { in: activeMacs } },
+                data: { lastSeen: new Date() }
+            });
+        } catch (e) {
+            console.error("❌ DB Error updating lastSeen:", e);
+        }
+    }
+}, 10000);
 
 wss.on('close', () => {
     clearInterval(interval);
 });
-
-// --- ГОЛОВНА ЛОГІКА ---
 
 wss.on('connection', (socket: WebSocket) => {
     const ws = socket as ExtWebSocket;
@@ -79,26 +102,21 @@ wss.on('connection', (socket: WebSocket) => {
 
             const msg = rawParsed;
 
-            // --- 1. РЕЄСТРАЦІЯ (ОНОВЛЕНО) ---
             if (msg.type === 'REGISTER') {
                 const macUpper = msg.mac.toUpperCase();
                 console.log(`📡 Device requesting registration: ${macUpper}`);
 
-                // Шукаємо пристрій у базі
                 const deviceRecord = await prisma.device.findUnique({
                     where: { macAddress: macUpper }
                 });
 
                 if (!deviceRecord) {
                     console.warn(`❌ UNAUTHORIZED DEVICE BLOCKED: ${macUpper}`);
-                    ws.send('UNAUTHORIZED'); // Повідомляємо ESP32, щоб вона засвітила червоні діоди
-
-                    // Відключаємо невідомий пристрій через секунду, щоб він встиг отримати повідомлення
+                    ws.send(JSON.stringify({ type: 'SYSTEM', command: 'UNAUTHORIZED' }));
                     setTimeout(() => ws.terminate(), 1000);
                     return;
                 }
 
-                // Якщо пристрій існує в базі, пускаємо його
                 if (devices.has(macUpper)) {
                     const oldSocket = devices.get(macUpper);
                     if (oldSocket && oldSocket !== ws) {
@@ -114,17 +132,20 @@ wss.on('connection', (socket: WebSocket) => {
                     data: { isOnline: true, lastSeen: new Date() }
                 });
 
-                ws.send('REGISTER_OK');
+                ws.send(JSON.stringify({ type: 'SYSTEM', command: 'REGISTER_OK' }));
                 console.log(`✅ Device Authorized & Online: ${deviceRecord.name} (${macUpper})`);
+
+                const statusMsg = { type: 'DEVICE_STATUS', mac: macUpper, isOnline: true };
+                wss.clients.forEach(client => {
+                    if (client.readyState === WebSocket.OPEN) client.send(JSON.stringify(statusMsg));
+                });
             }
 
-            // --- 2. ПЕРЕВІРКА ДОСТУПУ ---
             else if (msg.type === 'ACCESS_CHECK') {
                 const uidString = msg.payload.replace('UID:', '');
                 const currentMac = msg.mac.toUpperCase();
                 const direction = msg.direction || 'ENTRY';
 
-                // Додаткова перевірка безпеки: чи цей MAC взагалі авторизований в поточній сесії?
                 if (ws.deviceMac !== currentMac) {
                     console.warn(`⚠️ SECURITY ALERT: Unregistered socket trying to send ACCESS_CHECK as ${currentMac}`);
                     return;
@@ -133,36 +154,63 @@ wss.on('connection', (socket: WebSocket) => {
                 console.log(`🔍 Access Check: ${uidString} @ ${currentMac} (Dir: ${direction})`);
 
                 const deviceRecord = await prisma.device.findUnique({ where: { macAddress: currentMac } });
-                if (!deviceRecord) return; // Про всяк випадок
+                if (!deviceRecord) return;
 
                 await prisma.device.update({
                     where: { id: deviceRecord.id },
                     data: { isOnline: true, lastSeen: new Date() }
                 });
 
-                const user = await prisma.user.findUnique({ where: { cardUid: uidString } });
+                const user = await prisma.user.findUnique({
+                    where: { cardUid: uidString },
+                    include: { allowedDevices: true }
+                });
+
                 let accessGranted = false;
 
                 if (user && user.isActive) {
-                    if (direction === 'ENTRY') {
-                        if (!user.isInside) {
-                            accessGranted = true;
-                        } else {
-                            console.log(`⛔ ANTI-PASSBACK: ${user.name} вже всередині!`);
+                    const now = new Date();
+
+                    const isStarted = !user.validFrom || now >= user.validFrom;
+                    const isNotExpired = !user.validUntil || now <= user.validUntil;
+
+                    const hasDeviceAccess = user.role === 'ADMIN' || user.allowedDevices.some(d => d.macAddress.toUpperCase() === currentMac);
+
+                    if (isStarted && isNotExpired && hasDeviceAccess) {
+                        if (direction === 'ENTRY') {
+                            if (!user.isInside) {
+                                accessGranted = true;
+                            } else {
+                                console.log(`⛔ ANTI-PASSBACK: ${user.name} вже всередині!`);
+                            }
+                        } else if (direction === 'EXIT') {
+                            if (user.isInside) {
+                                accessGranted = true;
+                            } else {
+                                console.log(`⛔ ANTI-PASSBACK: ${user.name} намагається вийти, хоча він не заходив!`);
+                            }
                         }
-                    } else if (direction === 'EXIT') {
-                        if (user.isInside) {
-                            accessGranted = true;
-                        } else {
-                            console.log(`⛔ ANTI-PASSBACK: ${user.name} намагається вийти, хоча він не заходив!`);
+                    } else {
+                        if (!isStarted || !isNotExpired) {
+                            console.log(`⛔ Access denied for ${user.name}: Card expired or not yet valid.`);
+                        } else if (!hasDeviceAccess) {
+                            console.log(`⛔ Access denied for ${user.name}: No permission for this door.`);
                         }
                     }
                 }
 
                 if (accessGranted) {
-                    ws.send('ACCESS_GRANTED');
+                    ws.send(JSON.stringify({
+                        type: 'ACCESS_RESPONSE',
+                        status: 'GRANTED',
+                        relayTime: deviceRecord.relayTime || 5,
+                        relayType: deviceRecord.relayType || 'NO'
+                    }));
                 } else {
-                    ws.send('ACCESS_DENIED');
+                    ws.send(JSON.stringify({
+                        type: 'ACCESS_RESPONSE',
+                        status: 'DENIED'
+                    }));
 
                     await prisma.log.create({
                         data: {
@@ -170,6 +218,8 @@ wss.on('connection', (socket: WebSocket) => {
                             cardUid: uidString,
                             deviceId: deviceRecord.id,
                             userId: user ? user.id : null,
+                            userName: user ? user.name : null,      // SNAPSHOT
+                            userRole: user ? user.role : null,      // SNAPSHOT
                             direction: direction,
                             eventType: 'ACCESS'
                         }
@@ -180,13 +230,60 @@ wss.on('connection', (socket: WebSocket) => {
                 }
             }
 
-            // --- 3. ФІЗИЧНИЙ ПРОХІД ПІДТВЕРДЖЕНО ---
             else if (msg.type === 'PASSAGE_CONFIRMED') {
                 const uidString = msg.payload.replace('UID:', '');
                 const currentMac = msg.mac.toUpperCase();
                 const direction = msg.direction || 'ENTRY';
 
                 if (ws.deviceMac !== currentMac) return;
+
+                if (uidString === 'REMOTE') {
+                    const pendingInfo = pendingRemoteUnlocks.get(currentMac);
+
+                    if (pendingInfo) {
+                        console.log(`🏃‍♂️ PASSAGE CONFIRMED: Remote unlock completed physically on ${currentMac}`);
+
+                        const deviceRecord = await prisma.device.findUnique({ where: { macAddress: currentMac } });
+                        const user = await prisma.user.findUnique({ where: { id: pendingInfo.userId } });
+
+                        if (user && deviceRecord) {
+                            const isInsideNow = pendingInfo.direction === 'ENTRY';
+                            await prisma.user.update({
+                                where: { id: user.id },
+                                data: { isInside: isInsideNow }
+                            });
+
+                            await prisma.log.create({
+                                data: {
+                                    accessGranted: true,
+                                    cardUid: 'REMOTE',
+                                    deviceId: deviceRecord.id,
+                                    userId: user.id,
+                                    userName: user.name,            // SNAPSHOT
+                                    userRole: user.role,            // SNAPSHOT
+                                    direction: pendingInfo.direction,
+                                    eventType: 'ACCESS'
+                                }
+                            });
+
+                            const wsMessage = {
+                                type: 'EVENT',
+                                mac: currentMac,
+                                payload: 'UID:REMOTE',
+                                direction: pendingInfo.direction
+                            };
+                            wss.clients.forEach(client => {
+                                if (client.readyState === WebSocket.OPEN) {
+                                    client.send(JSON.stringify(wsMessage));
+                                }
+                            });
+                        }
+                        pendingRemoteUnlocks.delete(currentMac);
+                    } else {
+                        console.warn(`⚠️ Received PASSAGE_CONFIRMED for REMOTE, but no pending user found for MAC: ${currentMac}`);
+                    }
+                    return;
+                }
 
                 console.log(`🏃‍♂️ PASSAGE CONFIRMED: ${uidString} went ${direction}`);
 
@@ -205,6 +302,8 @@ wss.on('connection', (socket: WebSocket) => {
                             cardUid: uidString,
                             deviceId: deviceRecord.id,
                             userId: user.id,
+                            userName: user.name,                    // SNAPSHOT
+                            userRole: user.role,                    // SNAPSHOT
                             direction: direction,
                             eventType: 'ACCESS'
                         }
@@ -215,7 +314,6 @@ wss.on('connection', (socket: WebSocket) => {
                 }
             }
 
-            // --- 4. ПОДІЇ ГЕРКОНА ---
             else if (msg.type === 'DOOR_EVENT') {
                 if (ws.deviceMac !== msg.mac.toUpperCase()) return;
                 const doorState = msg.payload;
@@ -223,7 +321,6 @@ wss.on('connection', (socket: WebSocket) => {
                 wss.clients.forEach(client => { if (client !== ws) sendToClient(client, doorUpdateMsg); });
             }
 
-            // --- 5. ТРИВОГА ВЗЛОМУ ---
             else if (msg.type === 'INTRUSION_ALERT') {
                 const currentMac = msg.mac.toUpperCase();
                 if (ws.deviceMac !== currentMac) return;
@@ -236,9 +333,11 @@ wss.on('connection', (socket: WebSocket) => {
                     await prisma.log.create({
                         data: {
                             accessGranted: false,
-                            cardUid: 'ВЗЛОМ',
+                            cardUid: 'INTRUSION',
                             deviceId: deviceRecord.id,
                             userId: null,
+                            userName: null,
+                            userRole: null,
                             direction: 'ENTRY',
                             eventType: 'INTRUSION'
                         }
@@ -249,7 +348,6 @@ wss.on('connection', (socket: WebSocket) => {
                 }
             }
 
-            // --- 6. ПРОСТІ ПОДІЇ (Сканування картки при реєстрації) ---
             else if (msg.type === 'EVENT') {
                 if (ws.deviceMac !== msg.mac.toUpperCase()) return;
                 const eventMsg = {
@@ -263,16 +361,99 @@ wss.on('connection', (socket: WebSocket) => {
                 });
             }
 
-            // --- 7. КОМАНДИ (START_SCAN від фронтенду) ---
             else if (msg.type === 'COMMAND') {
-                console.log(`📡 Broadcasting COMMAND: ${msg.command}`);
-                wss.clients.forEach(client => {
-                    const extClient = client as ExtWebSocket;
-                    // Надсилаємо команду тільки авторизованим пристроям
-                    if (extClient.deviceMac && client.readyState === WebSocket.OPEN) {
-                        client.send(msg.command);
+                const { target, command, userId } = msg;
+                const macUpper = target.toUpperCase();
+
+                if (!userId) {
+                    console.warn(`❌ Command blocked: No userId provided for ${command}`);
+                    return;
+                }
+
+                const [user, deviceRecord] = await Promise.all([
+                    prisma.user.findUnique({
+                        where: { id: userId },
+                        include: { allowedDevices: true }
+                    }),
+                    prisma.device.findUnique({
+                        where: { macAddress: macUpper }
+                    })
+                ]);
+
+                if (!user || !user.isActive || !deviceRecord) {
+                    console.warn(`❌ Command blocked: User not found, inactive, or device not found`);
+                    return;
+                }
+
+                // Додатковий захист для критичної команди RESET_WIFI
+                if (command === 'RESET_WIFI' && user.role !== 'ADMIN') {
+                    console.warn(`🚫 SECURITY ALERT: User ${user.name} (Role: ${user.role}) attempted to Factory Reset device ${macUpper}`);
+                    return;
+                }
+
+                let hasAccess = false;
+                if (user.role === 'ADMIN') {
+                    hasAccess = true;
+                } else {
+                    hasAccess = user.allowedDevices.some(d => d.macAddress.toUpperCase() === macUpper);
+                }
+
+                if (!hasAccess) {
+                    console.warn(`❌ Command blocked: User ${user.name} has no access to ${macUpper}`);
+                    return;
+                }
+
+                const targetSocket = devices.get(macUpper);
+
+                if (targetSocket && targetSocket.readyState === WebSocket.OPEN) {
+
+                    if (command === 'OPEN_DOOR' || command === 'UNLOCK') {
+                        targetSocket.send(JSON.stringify({
+                            type: 'COMMAND',
+                            command: 'UNLOCK',
+                            relayTime: deviceRecord.relayTime || 5,
+                            relayType: deviceRecord.relayType || 'NO'
+                        }));
+
+                        console.log(`✅ Command "UNLOCK" sent to device ${macUpper} by ${user.name}`);
+
+                        const newDirection = user.isInside ? 'EXIT' : 'ENTRY';
+                        pendingRemoteUnlocks.set(macUpper, { userId: user.id, direction: newDirection });
+                        console.log(`⏳ Waiting for physical door opening by ${user.name}...`);
+
+                        setTimeout(() => {
+                            if (pendingRemoteUnlocks.has(macUpper)) {
+                                pendingRemoteUnlocks.delete(macUpper);
+                                console.log(`⏱️ Remote unlock timeout for ${macUpper}. Door was not opened.`);
+                            }
+                        }, 10000);
+
+                    } else if (command === 'UPDATE_CONFIG') {
+                        targetSocket.send(JSON.stringify({
+                            type: 'COMMAND',
+                            command: 'UPDATE_CONFIG',
+                            relayTime: deviceRecord.relayTime || 5,
+                            relayType: deviceRecord.relayType || 'NO'
+                        }));
+                        console.log(`🔄 Config update sent to device ${macUpper} by ${user.name}`);
+
+                    } else if (command === 'RESET_WIFI') {
+                        targetSocket.send(JSON.stringify({
+                            type: 'COMMAND',
+                            command: 'RESET_WIFI'
+                        }));
+                        console.log(`⚠️ CRITICAL: Factory Wi-Fi Reset sent to device ${macUpper} by Admin ${user.name}`);
+
+                    } else {
+                        targetSocket.send(JSON.stringify({
+                            type: 'COMMAND',
+                            command: command
+                        }));
+                        console.log(`✅ Command "${command}" sent to device ${macUpper} by ${user.name}`);
                     }
-                });
+                } else {
+                    console.warn(`⚠️ Failed to send command: Device ${macUpper} is offline`);
+                }
             }
 
         } catch (e) {
@@ -280,7 +461,6 @@ wss.on('connection', (socket: WebSocket) => {
         }
     });
 
-    // --- ОБРОБКА ВІДКЛЮЧЕННЯ ---
     ws.on('close', async () => {
         if (ws.deviceMac) {
             console.log(`🔌 Disconnected: ${ws.deviceMac}`);
@@ -292,6 +472,11 @@ wss.on('connection', (socket: WebSocket) => {
                     where: { macAddress: ws.deviceMac },
                     data: { isOnline: false }
                 }).catch(err => console.error("DB Error:", err));
+
+                const statusMsg = { type: 'DEVICE_STATUS', mac: ws.deviceMac, isOnline: false };
+                wss.clients.forEach(client => {
+                    if (client.readyState === WebSocket.OPEN) client.send(JSON.stringify(statusMsg));
+                });
             }
         }
     });

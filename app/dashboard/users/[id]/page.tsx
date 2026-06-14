@@ -1,7 +1,14 @@
 import { verifySession } from '@/app/lib/session'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, User, Briefcase, CreditCard, Activity, Clock } from 'lucide-react'
+import {
+    ChevronLeftIcon,
+    UserIcon,
+    BriefcaseIcon,
+    CreditCardIcon,
+    BoltIcon,
+    ClockIcon,
+} from '@heroicons/react/24/outline'
 import { getUserProfileStatsAction } from '@/app/dashboard/actions'
 import { WeeklyChart } from '@/app/ui/dashboard/weekly-chart'
 import { LogCard } from '@/app/ui/logs/log-card'
@@ -26,17 +33,34 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
 
     const { user, recentLogs, weeklyStats, avgWorkHours } = profileData
 
+    // Логіка перевірки гостьового часу
+    const now = new Date();
+    const validUntil = user.validUntil ? new Date(user.validUntil) : null;
+    const isExpired = validUntil ? now.getTime() > validUntil.getTime() : false;
+    const isActuallyActive = user.isActive && !isExpired;
+
+    let timeLeftString = null;
+    if (user.role === 'GUEST' && validUntil && !isExpired) {
+        const diffMs = validUntil.getTime() - now.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const hours = Math.floor(diffMins / 60);
+        const mins = diffMins % 60;
+        const days = Math.floor(hours / 24);
+
+        if (days > 0) timeLeftString = `${days}d ${hours % 24}h left`;
+        else if (hours > 0) timeLeftString = `${hours}h ${mins}m left`;
+        else timeLeftString = `${mins}m left`;
+    }
+
     return (
         <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
-            {/* Кнопка назад */}
             <Link
                 href="/dashboard/users"
                 className="inline-flex items-center gap-2 text-sm text-dark-muted hover:text-white transition-colors"
             >
-                <ChevronLeft size={16} /> Back to Users list
+                <ChevronLeftIcon className="w-4 h-4" /> Back to Users list
             </Link>
 
-            {/* Карточка інформації про користувача */}
             <div className="bg-dark-800 border border-dark-700 rounded-2xl p-6 shadow-lg flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
                 <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-dark-700 rounded-full flex items-center justify-center border border-dark-600 overflow-hidden shrink-0">
@@ -44,26 +68,36 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
                             /* eslint-disable-next-line @next/next/no-img-element */
                             <img src={user.image} alt={user.name || 'User'} className="w-full h-full object-cover" />
                         ) : (
-                            <User size={32} className="text-dark-muted" />
+                            <UserIcon className="w-8 h-8 text-dark-muted" />
                         )}
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold text-white">{user.name}</h1>
                         <div className="flex items-center gap-4 mt-2 text-sm text-dark-muted">
-                            <span className="flex items-center gap-1.5"><Briefcase size={14} /> {user.jobTitle || user.role}</span>
-                            <span className="flex items-center gap-1.5"><CreditCard size={14} /> UID: {user.cardUid || 'No card'}</span>
+                            <span className="flex items-center gap-1.5"><BriefcaseIcon className="w-4 h-4" /> {user.jobTitle || user.role}</span>
+                            <span className="flex items-center gap-1.5"><CreditCardIcon className="w-4 h-4" /> UID: {user.cardUid || 'No card'}</span>
                         </div>
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-2 min-w-[140px]">
                     <div className={`px-3 py-1.5 rounded-lg border text-center text-xs font-bold tracking-wide uppercase ${
-                        user.isActive
+                        isActuallyActive
                             ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                            : 'bg-red-500/10 text-red-400 border-red-500/20'
+                            : isExpired
+                                ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                                : 'bg-red-500/10 text-red-400 border-red-500/20'
                     }`}>
-                        {user.isActive ? 'Active Account' : 'Blocked'}
+                        {!user.isActive ? 'Blocked Manually' : isExpired ? 'Access Expired' : 'Active Account'}
                     </div>
+
+                    {/* Таймер для гостя */}
+                    {timeLeftString && (
+                        <div className="px-3 py-1.5 rounded-lg border text-center text-xs font-bold tracking-wide uppercase bg-yellow-500/10 text-yellow-500 border-yellow-500/20 shadow-inner flex items-center justify-center gap-1.5">
+                            <ClockIcon className="w-3.5 h-3.5" /> {timeLeftString}
+                        </div>
+                    )}
+
                     <div className={`px-3 py-1.5 rounded-lg border text-center text-xs font-bold tracking-wide uppercase ${
                         user.isInside
                             ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
@@ -71,25 +105,25 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
                     }`}>
                         {user.isInside ? 'Currently Inside' : 'Outside'}
                     </div>
-                    <div className="px-3 py-1.5 rounded-lg border text-center text-xs font-bold tracking-wide uppercase bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-inner">
-                        <span className="flex items-center justify-center gap-1.5">
-                            <Clock size={12} /> {avgWorkHours}h / day
-                        </span>
-                    </div>
+
+                    {user.role !== 'GUEST' && (
+                        <div className="px-3 py-1.5 rounded-lg border text-center text-xs font-bold tracking-wide uppercase bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-inner">
+                            <span className="flex items-center justify-center gap-1.5">
+                                <ClockIcon className="w-3.5 h-3.5" /> {avgWorkHours}h / day
+                            </span>
+                        </div>
+                    )}
                 </div>
             </div>
 
             <div className="grid lg:grid-cols-3 gap-6">
-                {/* Персональний графік */}
                 <div className="lg:col-span-2">
-                    {/* ТУТ ДОДАЄМО showWorkHours */}
                     <WeeklyChart data={weeklyStats} showWorkHours={true} />
                 </div>
 
-                {/* Останні проходи */}
                 <div className="bg-dark-800 border border-dark-700 rounded-2xl p-6 shadow-lg flex flex-col">
                     <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                        <Activity size={20} className="text-primary" />
+                        <BoltIcon className="w-5 h-5 text-primary" />
                         Recent Activity
                     </h3>
 
@@ -100,7 +134,6 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
                             </div>
                         ) : (
                             recentLogs.map((log) => (
-                                /* Тепер TypeScript задоволений на 100% */
                                 <LogCard key={log.id} log={log} />
                             ))
                         )}

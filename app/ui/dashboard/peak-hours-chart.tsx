@@ -2,11 +2,16 @@
 
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { HourlyStat } from '@/app/dashboard/actions'
+import { PresentationChartLineIcon } from '@heroicons/react/24/outline'
 
 export function PeakHoursChart({ data }: { data: HourlyStat[] }) {
+
     return (
         <div className="bg-dark-800 border border-dark-700 rounded-2xl p-6 shadow-lg h-[400px] flex flex-col w-full">
-            <h3 className="text-xl font-bold text-white mb-6">Peak Hours (Last 30 Days)</h3>
+            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <PresentationChartLineIcon className="w-5 h-5 text-amber-500" />
+                Peak Hours (Last 30 Days)
+            </h3>
 
             <div className="flex-1 w-full h-full min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
