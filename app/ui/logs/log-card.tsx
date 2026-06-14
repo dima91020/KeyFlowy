@@ -9,9 +9,22 @@ import { LogWithDetails } from '@/app/dashboard/actions'
 
 export function LogCard({ log }: { log: LogWithDetails }) {
     const logDate = new Date(log.timestamp)
-    const dateString = logDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-    const timeString = logDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
+    const dateString = logDate.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'Europe/Kyiv'
+    })
+
+    const timeString = logDate.toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZone: 'Europe/Kyiv'
+    })
+
+    // ...
     const isIntrusion = log.eventType === 'INTRUSION' || log.cardUid === 'INTRUSION'
     const isRemoteUnlock = log.cardUid === 'REMOTE'
 
