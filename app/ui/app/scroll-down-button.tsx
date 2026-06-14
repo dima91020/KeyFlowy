@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDownIcon } from "@heroicons/react/24/outline";
 
 export default function ScrollDownButton({ scrollToID }: { scrollToID: string }) {
     const handleClick = () => {
@@ -25,10 +25,10 @@ export default function ScrollDownButton({ scrollToID }: { scrollToID: string })
             "
         >
             <div className="text-dark-muted hover:text-white transition-colors flex flex-col items-center gap-2">
-        <span className="text-xs font-medium uppercase tracking-widest opacity-50">
-          Explore
-        </span>
-                <ChevronDown size={32} />
+                <span className="text-xs font-medium uppercase tracking-widest opacity-50">
+                  Explore
+                </span>
+                <ChevronDownIcon className="w-8 h-8" />
             </div>
         </div>
     );

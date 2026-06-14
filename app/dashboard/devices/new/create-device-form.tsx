@@ -3,7 +3,7 @@
 import { useActionState } from 'react'
 import Link from 'next/link'
 import { useFormStatus } from 'react-dom'
-import { Router, Cpu, AlignLeft, Loader2 } from 'lucide-react'
+import { SignalIcon, CpuChipIcon, Bars3BottomLeftIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { createDeviceAction, DeviceState } from '../actions'
 
 // Окремий компонент для кнопки, щоб використовувати useFormStatus
@@ -18,7 +18,7 @@ function SubmitButton() {
         >
             {pending ? (
                 <>
-                    <Loader2 size={18} className="animate-spin" />
+                    <ArrowPathIcon className="w-5 h-5 animate-spin" />
                     Registering...
                 </>
             ) : (
@@ -46,7 +46,7 @@ export function CreateDeviceForm() {
                 <label htmlFor="name" className="text-sm font-medium text-gray-300 ml-1">Device Name</label>
                 <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Router size={18} className="text-dark-muted" />
+                        <SignalIcon className="w-5 h-5 text-dark-muted" />
                     </div>
                     <input
                         type="text"
@@ -67,7 +67,7 @@ export function CreateDeviceForm() {
                 <label htmlFor="macAddress" className="text-sm font-medium text-gray-300 ml-1">MAC Address</label>
                 <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Cpu size={18} className="text-dark-muted" />
+                        <CpuChipIcon className="w-5 h-5 text-dark-muted" />
                     </div>
                     <input
                         type="text"
@@ -92,7 +92,7 @@ export function CreateDeviceForm() {
                 <label htmlFor="description" className="text-sm font-medium text-gray-300 ml-1">Description (Optional)</label>
                 <div className="relative">
                     <div className="absolute top-3 left-3 pointer-events-none">
-                        <AlignLeft size={18} className="text-dark-muted" />
+                        <Bars3BottomLeftIcon className="w-5 h-5 text-dark-muted" />
                     </div>
                     <textarea
                         id="description"

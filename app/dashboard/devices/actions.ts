@@ -4,11 +4,15 @@ import { prisma } from '@/app/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
+import { verifySession } from '@/app/lib/session'
+import { Prisma } from '@prisma/client'
 
 // 1. Схеми валідації
 const updateDeviceSchema = z.object({
     id: z.string(),
     name: z.string().min(2, "Name must be at least 2 characters").max(30, "Name is too long"),
+    relayTime: z.coerce.number().min(1, "Minimum 1 second").max(60, "Maximum 60 seconds"),
+    relayType: z.enum(["NO", "NC"]), // Додали валідацію типу реле
 })
 
 const deleteDeviceSchema = z.object({
@@ -17,35 +21,46 @@ const deleteDeviceSchema = z.object({
 
 const createDeviceSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters").max(30, "Name is too long"),
-    // Перевіряємо стандартний формат MAC-адреси (наприклад, 24:0A:C4:00:01:10 або 24-0A-C4-00-01-10)
     macAddress: z.string().regex(/^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/, "Invalid MAC address format (e.g., 24:0A:C4:00:01:10)"),
     description: z.string().max(200, "Description is too long").optional().or(z.literal('')),
 })
 
-// 2. Тип для стану форми (те, що повертає екшен)
+// 2. Тип для стану форми
 export type DeviceState = {
     message?: string | null;
     errors?: {
         name?: string[];
         macAddress?: string[];
         description?: string[];
+        relayTime?: string[];
+        relayType?: string[]; // Додали помилки для relayType
     };
 }
 
+// Отримуємо пристрої тільки поточного адміністратора
 export async function getDevices() {
+    const adminId = await verifySession()
+    if (!adminId) return []
+
     return await prisma.device.findMany({
+        where: { adminId },
         orderBy: [{ isOnline: 'desc' }, { lastSeen: 'desc' }]
     })
 }
 
 // 3. Екшен редагування
-export async function updateDeviceName(
+export async function updateDeviceAction(
     prevState: DeviceState,
     formData: FormData
 ): Promise<DeviceState> {
+    const adminId = await verifySession()
+    if (!adminId) return { message: "Unauthorized" }
+
     const rawData = {
         id: formData.get('id') as string,
         name: formData.get('name') as string,
+        relayTime: formData.get('relayTime'),
+        relayType: formData.get('relayType'), // Дістаємо тип реле
     }
 
     const validated = updateDeviceSchema.safeParse(rawData)
@@ -57,13 +72,26 @@ export async function updateDeviceName(
         }
     }
 
-    const { id, name } = validated.data
+    const { id, name, relayTime, relayType } = validated.data
 
     try {
-        await prisma.device.update({
-            where: { id },
-            data: { name }
+        // Оновлюємо пристрій
+        const result = await prisma.device.updateMany({
+            where: {
+                id,
+                adminId // Перевіряємо, чи має право цей адмін оновлювати цей девайс
+            },
+            data: {
+                name,
+                relayTime,
+                relayType // Зберігаємо новий тип реле
+            }
         })
+
+        if (result.count === 0) {
+            return { message: "Device not found or access denied" }
+        }
+
         revalidatePath('/dashboard/devices')
         revalidatePath('/dashboard/users/new')
         return { message: "Device updated successfully" }
@@ -74,15 +102,20 @@ export async function updateDeviceName(
 
 // 4. Екшен видалення
 export async function deleteDevice(formData: FormData) {
-    const id = formData.get('id') as string
+    const adminId = await verifySession()
+    if (!adminId) return
 
+    const id = formData.get('id') as string
     const validated = deleteDeviceSchema.safeParse({ id })
 
     if (!validated.success) return;
 
     try {
-        await prisma.device.delete({
-            where: { id: validated.data.id }
+        await prisma.device.deleteMany({
+            where: {
+                id: validated.data.id,
+                adminId
+            }
         })
         revalidatePath('/dashboard/devices')
     } catch (e) {
@@ -90,18 +123,20 @@ export async function deleteDevice(formData: FormData) {
     }
 }
 
-// 5. НОВИЙ Екшен створення пристрою
+// 5. Екшен створення пристрою
 export async function createDeviceAction(
     prevState: DeviceState,
     formData: FormData
 ): Promise<DeviceState> {
+    const adminId = await verifySession()
+    if (!adminId) return { message: "Unauthorized: Please log in again." }
+
     const rawData = {
         name: formData.get('name') as string,
         macAddress: formData.get('macAddress') as string,
         description: formData.get('description') as string,
     }
 
-    // Валідація Zod
     const validated = createDeviceSchema.safeParse(rawData)
 
     if (!validated.success) {
@@ -117,23 +152,27 @@ export async function createDeviceAction(
         await prisma.device.create({
             data: {
                 name,
-                macAddress: macAddress.toUpperCase(), // Завжди зберігаємо у верхньому регістрі
+                macAddress: macAddress.toUpperCase(),
                 description: description || null,
                 isOnline: false,
+                relayTime: 5,
+                relayType: "NO", // Дефолтний тип при створенні
+                adminId,
             }
         });
-    } catch (error: unknown) {
-        // Перевіряємо чи це помилка унікальності Prisma (P2002)
-        if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
-            return {
-                message: "This device is already registered",
-                errors: { macAddress: ["MAC Address already exists in the system"] }
-            };
+    } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+            if (error.code === 'P2002') {
+                return {
+                    message: "This device is already registered",
+                    errors: { macAddress: ["MAC Address already exists in the system"] }
+                };
+            }
         }
+        console.error("Помилка створення пристрою:", error)
         return { message: "Database error: Failed to create device" };
     }
 
-    // Робимо редірект поза блоком try-catch, бо Next.js використовує помилки для редіректу під капотом
     revalidatePath('/dashboard/devices');
     redirect('/dashboard/devices');
 }

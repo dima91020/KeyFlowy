@@ -1,8 +1,9 @@
 'use client'
 
 import { PieChart, Pie, Tooltip, ResponsiveContainer, Legend } from 'recharts'
-import { ShieldAlert } from 'lucide-react'
+import { ShieldExclamationIcon } from '@heroicons/react/24/outline'
 import { SecurityStat } from '@/app/dashboard/actions'
+import { SecurityChartSkeleton } from '@/app/ui/dashboard/security-chart-skeleton'
 
 interface LegendPayload {
     value: string;
@@ -27,7 +28,9 @@ const CustomLegend = ({ payload }: { payload?: LegendPayload[] }) => {
     );
 }
 
-export function SecurityChart({ data }: { data: SecurityStat[] }) {
+export function SecurityChart({ data }: { data?: SecurityStat[] }) {
+    if (!data) return <SecurityChartSkeleton />;
+
     const totalEvents = data.reduce((sum, item) => sum + item.value, 0);
 
     const chartData = totalEvents > 0
@@ -37,7 +40,7 @@ export function SecurityChart({ data }: { data: SecurityStat[] }) {
     return (
         <div className="bg-dark-800 border border-dark-700 rounded-2xl p-6 shadow-lg h-[400px] flex flex-col w-full relative">
             <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                <ShieldAlert className="text-red-500" size={20} />
+                <ShieldExclamationIcon className="text-red-500 w-5 h-5" />
                 Security Overview
             </h3>
 
@@ -55,7 +58,7 @@ export function SecurityChart({ data }: { data: SecurityStat[] }) {
                             cy="50%"
                             innerRadius={60}
                             outerRadius={110}
-                            paddingAngle={5}
+                            paddingAngle={totalEvents > 0 ? 5 : 0}
                             dataKey="value"
                             stroke="none"
                         />
@@ -67,7 +70,6 @@ export function SecurityChart({ data }: { data: SecurityStat[] }) {
                                 color: '#fff'
                             }}
                             itemStyle={{ fontSize: '14px', fontWeight: 500 }}
-                            // Використовуємо unknown і робимо перевірку типу (Type Guard)
                             formatter={(value: unknown) => {
                                 if (totalEvents === 0) return 0;
                                 return typeof value === 'number' ? value : 0;

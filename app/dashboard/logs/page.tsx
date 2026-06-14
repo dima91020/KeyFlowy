@@ -1,12 +1,13 @@
 import { prisma } from '@/app/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
+import { MagnifyingGlassIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import { verifySession } from '@/app/lib/session'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { LogCard } from '@/app/ui/logs/log-card'
 import { CustomSelect } from '@/app/ui/logs/custom-select'
-
+import { LiveListener } from "@/app/dashboard/users/live-listener"
+import { ExportButton } from './export-button'
 
 const ITEMS_PER_PAGE = 20
 
@@ -16,6 +17,9 @@ export default async function LogsPage({searchParams}: {
     const currentUserId = await verifySession()
     if (!currentUserId) redirect('/login')
 
+    const user = await prisma.user.findUnique({ where: { id: currentUserId } })
+    if (!user) redirect('/login')
+
     const params = await searchParams;
     const query = params?.query || '';
     const status = params?.status || 'ALL';
@@ -23,9 +27,15 @@ export default async function LogsPage({searchParams}: {
     const sort = params?.sort || 'desc';
     const currentPage = Number(params?.page) || 1;
 
-    // Правильно і динамічно формуємо умови пошуку без порожніх об'єктів
     const whereCondition: Prisma.LogWhereInput = {}
     const andConditions: Prisma.LogWhereInput[] = []
+
+    // SaaS Логіка: Адмін бачить логи своїх девайсів, юзер тільки свої
+    if (user.role === 'ADMIN') {
+        andConditions.push({ device: { adminId: user.id } })
+    } else {
+        andConditions.push({ userId: user.id })
+    }
 
     if (query) {
         andConditions.push({
@@ -47,11 +57,9 @@ export default async function LogsPage({searchParams}: {
         whereCondition.AND = andConditions
     }
 
-    // Отримуємо загальну кількість для пагінації
     const totalLogs = await prisma.log.count({ where: whereCondition })
     const totalPages = Math.ceil(totalLogs / ITEMS_PER_PAGE)
 
-    // Отримуємо самі логи
     const logs = await prisma.log.findMany({
         where: whereCondition,
         orderBy: {
@@ -65,7 +73,6 @@ export default async function LogsPage({searchParams}: {
         }
     })
 
-    // Функція для генерації URL з поточними параметрами
     const createPageUrl = (pageNumber: number) => {
         const urlParams = new URLSearchParams()
         if (query) urlParams.set('query', query)
@@ -78,22 +85,27 @@ export default async function LogsPage({searchParams}: {
 
     return (
         <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
-            <div>
-                <h1 className="text-3xl font-bold text-white">Access Logs</h1>
-                <p className="text-dark-muted mt-1">Full history of access events, intrusions, and movements.</p>
+            <LiveListener />
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-white">Access Logs</h1>
+                    <p className="text-dark-muted mt-1">Full history of access events, intrusions, and movements.</p>
+                </div>
+
+                <ExportButton />
             </div>
 
-            {/* Панель фільтрів */}
             <form method="GET" className="bg-dark-800/50 border border-dark-700/50 rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-end">
                 <div className="flex-1 w-full space-y-1.5">
                     <label className="text-xs font-medium text-dark-muted ml-1">Search</label>
-                    <div className="relative">
-                        <Search className="absolute left-3 top-2.5 text-dark-muted" size={18} />
+                    <div className="relative h-[46px]">
+                        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted w-5 h-5" />
                         <input
                             name="query"
                             defaultValue={query}
                             placeholder="Search by name or card UID..."
-                            className="w-full bg-dark-900 border border-dark-700 rounded-xl pl-10 pr-4 py-2 outline-none focus:border-primary text-sm transition-colors"
+                            className="w-full h-full bg-dark-900 border border-dark-700 rounded-xl pl-10 pr-4 outline-none focus:border-primary text-sm transition-colors"
                         />
                     </div>
                 </div>
@@ -138,22 +150,21 @@ export default async function LogsPage({searchParams}: {
                 </div>
 
                 <div className="flex gap-2 w-full md:w-auto">
-                    <button type="submit" className="flex-1 md:flex-none bg-primary hover:bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 h-[38px]">
-                        <Filter size={16} />
+                    <button type="submit" className="flex-1 md:flex-none bg-primary hover:bg-blue-600 text-white px-6 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 h-[46px]">
+                        <FunnelIcon className="w-4 h-4" />
                         Apply
                     </button>
 
-                    <Link href="/dashboard/logs" className="px-4 py-2 rounded-xl text-sm font-medium text-dark-muted hover:text-white bg-dark-700 hover:bg-dark-600 transition-all h-[38px] flex items-center justify-center">
+                    <Link href="/dashboard/logs" className="px-4 rounded-xl text-sm font-medium text-dark-muted hover:text-white bg-dark-700 hover:bg-dark-600 transition-all flex items-center justify-center h-[46px]">
                         Reset
                     </Link>
                 </div>
             </form>
 
-            {/* Список логів */}
             <div className="space-y-3">
                 {logs.length === 0 ? (
                     <div className="text-center py-20 text-dark-muted border border-dashed border-dark-700/50 rounded-2xl">
-                        <Search size={48} className="mx-auto mb-3 opacity-20" />
+                        <MagnifyingGlassIcon className="w-12 h-12 mx-auto mb-3 opacity-20" />
                         <p>No logs found matching your criteria.</p>
                     </div>
                 ) : (
@@ -163,7 +174,6 @@ export default async function LogsPage({searchParams}: {
                 )}
             </div>
 
-            {/* Пагінація */}
             {totalPages > 1 && (
                 <div className="flex items-center justify-between pt-6 border-t border-dark-700/50">
                     <p className="text-sm text-dark-muted">
@@ -175,11 +185,11 @@ export default async function LogsPage({searchParams}: {
                                 href={createPageUrl(currentPage - 1)}
                                 className="px-3 py-2 rounded-xl bg-dark-800 border border-dark-700 text-white hover:bg-dark-700 transition-colors flex items-center gap-1 text-sm"
                             >
-                                <ChevronLeft size={16} /> Previous
+                                <ChevronLeftIcon className="w-4 h-4" /> Previous
                             </Link>
                         ) : (
                             <button disabled className="px-3 py-2 rounded-xl bg-dark-900/50 border border-dark-800 text-dark-muted cursor-not-allowed flex items-center gap-1 text-sm">
-                                <ChevronLeft size={16} /> Previous
+                                <ChevronLeftIcon className="w-4 h-4" /> Previous
                             </button>
                         )}
 
@@ -188,11 +198,11 @@ export default async function LogsPage({searchParams}: {
                                 href={createPageUrl(currentPage + 1)}
                                 className="px-3 py-2 rounded-xl bg-dark-800 border border-dark-700 text-white hover:bg-dark-700 transition-colors flex items-center gap-1 text-sm"
                             >
-                                Next <ChevronRight size={16} />
+                                Next <ChevronRightIcon className="w-4 h-4" />
                             </Link>
                         ) : (
                             <button disabled className="px-3 py-2 rounded-xl bg-dark-900/50 border border-dark-800 text-dark-muted cursor-not-allowed flex items-center gap-1 text-sm">
-                                Next <ChevronRight size={16} />
+                                Next <ChevronRightIcon className="w-4 h-4" />
                             </button>
                         )}
                     </div>

@@ -1,6 +1,5 @@
 'use client'
 
-// Зверни увагу: додали ComposedChart та Line
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { DailyStat } from '@/app/dashboard/actions'
 

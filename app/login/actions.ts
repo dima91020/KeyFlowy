@@ -1,10 +1,10 @@
 'use server'
 
 import { z } from 'zod'
-import { prisma } from '@/app/lib/prisma' // Перевір шлях
+import { prisma } from '@/app/lib/prisma'
 import { compare } from 'bcrypt'
 import { redirect } from 'next/navigation'
-import { createSession, deleteSession } from '@/app/lib/session' // <--- Імпорт наших функцій
+import { createSession, deleteSession } from '@/app/lib/session'
 
 const loginSchema = z.object({
     email: z.string().email("Invalid email address"),
@@ -19,6 +19,7 @@ export type LoginState = {
     message?: string | null;
     inputs?: {
         email?: string;
+        password?: string; // Додано для збереження введеного пароля
     };
 }
 
@@ -34,7 +35,7 @@ export async function loginAction(prevState: LoginState, formData: FormData): Pr
         return {
             errors: validatedFields.error.flatten().fieldErrors,
             message: "Invalid credentials.",
-            inputs: { email: rawData.email }
+            inputs: rawData
         }
     }
 
@@ -45,24 +46,30 @@ export async function loginAction(prevState: LoginState, formData: FormData): Pr
             where: { email }
         })
 
-        if (!user || !user.password || !(await compare(password, user.password))) {
+        // Розділяємо перевірки для точного вказування помилки
+        if (!user || !user.password) {
             return {
-                message: "Invalid email or password.",
-                inputs: { email }
+                errors: { email: ["User with this email not found."] },
+                inputs: rawData
             }
         }
 
-        // --- БУЛО: ---
-        // cookieStore.set(...)
+        const isPasswordValid = await compare(password, user.password)
 
-        // --- СТАЛО (Набагато чистіше і безпечніше): ---
+        if (!isPasswordValid) {
+            return {
+                errors: { password: ["Incorrect password."] },
+                inputs: rawData
+            }
+        }
+
         await createSession(user.id)
 
     } catch (error) {
         console.error("Login Error:", error)
         return {
             message: "Something went wrong. Please try again.",
-            inputs: { email: rawData.email }
+            inputs: rawData
         }
     }
 
@@ -70,6 +77,6 @@ export async function loginAction(prevState: LoginState, formData: FormData): Pr
 }
 
 export async function logoutAction() {
-    await deleteSession() // Використовуємо нашу функцію
+    await deleteSession()
     redirect('/')
 }

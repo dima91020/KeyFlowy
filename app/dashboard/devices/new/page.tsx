@@ -1,7 +1,7 @@
 import { verifySession } from '@/app/lib/session'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Router } from 'lucide-react'
+import { ChevronLeftIcon, CpuChipIcon } from '@heroicons/react/24/outline'
 import { CreateDeviceForm } from './create-device-form'
 
 export default async function NewDevicePage() {
@@ -14,21 +14,20 @@ export default async function NewDevicePage() {
                 href="/dashboard/devices"
                 className="inline-flex items-center gap-2 text-sm text-dark-muted hover:text-white transition-colors"
             >
-                <ChevronLeft size={16} /> Back to Devices
+                <ChevronLeftIcon className="w-4 h-4" /> Back to Devices
             </Link>
 
             <div className="bg-dark-800 border border-dark-700 rounded-2xl p-6 md:p-8 shadow-lg">
                 <div className="mb-8">
                     <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-                        <Router className="text-primary" />
+                        <CpuChipIcon className="w-6 h-6 text-primary" />
                         Add New Device
                     </h1>
                     <p className="text-dark-muted mt-2">
-                        Register a new ESP32 controller using its unique MAC address.
+                        Register a new device using its unique MAC address.
                     </p>
                 </div>
 
-                {/* Вставляємо нашу клієнтську форму */}
                 <CreateDeviceForm />
             </div>
         </div>

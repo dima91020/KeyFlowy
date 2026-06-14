@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Menu, X, LogOut } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
 import { menuItems } from './sidebar'
 import { logoutAction } from '../login/actions'
+import { Bars3Icon, XMarkIcon, ArrowRightStartOnRectangleIcon } from '@heroicons/react/24/outline'
 
 export function MobileSidebar() {
     const [isOpen, setIsOpen] = useState(false)
@@ -34,8 +34,8 @@ export function MobileSidebar() {
 
     if (!mounted) {
         return (
-            <button className="md:hidden text-dark-muted p-2 -ml-2">
-                <Menu size={24} />
+            <button className="md:hidden text-dark-muted p-2 -ml-2 outline-none focus:outline-none focus:ring-0 [-webkit-tap-highlight-color:transparent]">
+                <Bars3Icon className="w-6 h-6" />
             </button>
         )
     }
@@ -52,12 +52,12 @@ export function MobileSidebar() {
                 isOpen ? "translate-x-0" : "-translate-x-full"
             )}>
                 <div className="h-16 flex items-center justify-between px-6 border-b border-dark-700">
-                    <span className="text-xl font-bold text-white tracking-tight">SecurePass</span>
+                    <span className="text-xl font-bold text-white tracking-tight">Smart ACS</span>
                     <button
                         onClick={() => setIsOpen(false)}
-                        className="text-dark-muted hover:text-white transition-colors"
+                        className="text-dark-muted hover:text-white transition-colors outline-none focus:outline-none focus:ring-0 [-webkit-tap-highlight-color:transparent]"
                     >
-                        <X size={24} />
+                        <XMarkIcon className="w-6 h-6" />
                     </button>
                 </div>
 
@@ -70,13 +70,14 @@ export function MobileSidebar() {
                                 href={item.href}
                                 onClick={() => setIsOpen(false)}
                                 className={clsx(
-                                    "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all",
+                                    "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl select-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 [-webkit-tap-highlight-color:transparent]",
                                     isActive
                                         ? "bg-primary text-white shadow-lg shadow-blue-500/20"
                                         : "text-dark-muted hover:bg-dark-700 hover:text-white"
                                 )}
                             >
-                                <item.icon size={20} />
+                                {/* Змінили size={20} на className="w-5 h-5" для сумісності з Heroicons */}
+                                <item.icon className="w-5 h-5" />
                                 {item.name}
                             </Link>
                         )
@@ -87,9 +88,9 @@ export function MobileSidebar() {
                     <form action={logoutAction}>
                         <button
                             type="submit"
-                            className="flex items-center gap-3 px-4 py-3 w-full text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-xl transition-colors"
+                            className="flex items-center gap-3 px-4 py-3 w-full text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-xl outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 [-webkit-tap-highlight-color:transparent]"
                         >
-                            <LogOut size={20} />
+                            <ArrowRightStartOnRectangleIcon className="w-5 h-5" />
                             Sign Out
                         </button>
                     </form>
@@ -102,9 +103,9 @@ export function MobileSidebar() {
         <>
             <button
                 onClick={() => setIsOpen(true)}
-                className="md:hidden text-dark-muted hover:text-white p-2 -ml-2 transition-colors"
+                className="md:hidden text-dark-muted hover:text-white p-2 -ml-2 transition-colors outline-none focus:outline-none focus:ring-0 [-webkit-tap-highlight-color:transparent]"
             >
-                <Menu size={24} />
+                <Bars3Icon className="w-6 h-6" />
             </button>
 
             {isOpen && createPortal(sidebarContent, document.body)}
