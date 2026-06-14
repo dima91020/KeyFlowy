@@ -338,7 +338,7 @@ export default async function LandingPage() {
                     <div className="text-dark-muted text-sm flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6">
                         <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
                         <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
-                        <Link href="https://github.com/your-username/your-repo" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Documentation</Link>
+                        <Link href="https://github.com/dima91020/diploma-access-control" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Documentation</Link>
                     </div>
 
                     <div className="text-dark-muted text-sm text-center md:text-right">
