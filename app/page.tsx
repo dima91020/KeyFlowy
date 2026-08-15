@@ -9,16 +9,11 @@ import {
     CpuChipIcon,
     ComputerDesktopIcon,
     LockClosedIcon,
-    ChartBarIcon,
-    ClockIcon,
-    KeyIcon,
-    CircleStackIcon,
     EyeIcon,
     WrenchScrewdriverIcon
 } from '@heroicons/react/24/outline'
 import { Badge } from '@/app/ui/badge'
 import React from "react";
-import ScrollDownButton from "@/app/ui/app/scroll-down-button";
 
 export default async function LandingPage() {
     const userId = await verifySession();
@@ -44,13 +39,7 @@ export default async function LandingPage() {
                         <span className="text-base font-bold tracking-tight text-slate-900">KeyFlowy</span>
                     </div>
 
-                    <div className="flex items-center gap-6">
-                        <nav className="hidden md:flex gap-6 text-xs font-medium text-slate-600">
-                            <Link href="#components" className="hover:text-slate-900 transition-colors">Architecture</Link>
-                            <Link href="#how-it-works" className="hover:text-slate-900 transition-colors">Workflow</Link>
-                            <Link href="#features" className="hover:text-slate-900 transition-colors">Features</Link>
-                        </nav>
-
+                    <div className="flex items-center gap-3">
                         {isLoggedIn ? (
                             <Link
                                 href="/dashboard"
@@ -62,7 +51,7 @@ export default async function LandingPage() {
                             <div className="flex items-center gap-2">
                                 <Link
                                     href="/login"
-                                    className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                                    className="px-3.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors"
                                 >
                                     Log In
                                 </Link>
