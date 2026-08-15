@@ -34,7 +34,7 @@ export function Sidebar() {
                 <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white">
                     <ShieldCheckIcon className="w-5 h-5" />
                 </div>
-                <span className="text-base font-bold tracking-tight text-slate-900">Smart ACS</span>
+                <span className="text-base font-bold tracking-tight text-slate-900">KeyFlowy</span>
             </Link>
 
             <nav className="flex-1 p-3 space-y-1 overflow-y-auto">

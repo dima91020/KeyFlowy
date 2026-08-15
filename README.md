@@ -1,4 +1,4 @@
-# Smart Physical Access Control System (PACS) & IoT Security Platform
+# KeyFlowy — Physical Access Control System (PACS) & IoT Security Platform
 
 An enterprise-grade, end-to-end **Physical Access Control System (PACS)** and IoT security management platform. The system bridges physical microcontroller hardware (**ESP32 with dual PN532 NFC readers**), a high-performance **WebSocket Gateway**, a deterministic **Anti-Passback (APB) Security Engine**, and a modern **Next.js 16 (App Router)** management dashboard with real-time telemetry and automated attendance analytics.
 
@@ -25,50 +25,12 @@ An enterprise-grade, end-to-end **Physical Access Control System (PACS)** and Io
 ## System Architecture
 
 ```mermaid
-flowchart TB
-    subgraph Hardware["IoT Hardware Layer (ESP32)"]
-        NFC_IN["PN532 Reader (Entry)\nI2C Bus 0 (Wire)"]
-        NFC_OUT["PN532 Reader (Exit)\nI2C Bus 1 (Wire1)"]
-        RELAY["Relay Actuator\n(NO / NC Configurable)"]
-        SENSOR["Magnetic Door Sensor\n(Reed Switch)"]
-        BUZZER["Buzzer & Status LEDs"]
-    end
-
-    subgraph Gateway["WebSocket Gateway (:8080)"]
-        WS_SRV["Connection Manager\n& Watchdog Ping"]
-        APB_ENG["Anti-Passback &\nAccess Decision Engine"]
-        LOGGER["Structured Audit Logger"]
-    end
-
-    subgraph WebApp["Next.js 16 Web Application (:3000)"]
-        DASH["Admin Dashboard\n& Employee Portal"]
-        ACTIONS["Server Actions\n& Zod Validation"]
-        API["HTTP Hardware Config API"]
-    end
-
-    subgraph Database["PostgreSQL + Prisma ORM"]
-        USERS["Users & Credentials"]
-        DEVICES["Device Fleet & Keys"]
-        LOGS["Access Logs & Metrics\n(Indexed)"]
-    end
-
-    subgraph Simulator["Interactive CLI Simulator"]
-        SIM_CLI["simulator/cli.ts"]
-    end
-
-    NFC_IN -->|ACCESS_CHECK| WS_SRV
-    NFC_OUT -->|ACCESS_CHECK| WS_SRV
-    SENSOR -->|PASSAGE_CONFIRMED / DOOR_EVENT| WS_SRV
-    WS_SRV -->|ACCESS_RESPONSE / COMMAND| RELAY
-    WS_SRV -->|Tone / LED Signal| BUZZER
-
-    SIM_CLI <-->|Simulated Protocol| WS_SRV
-
-    WS_SRV <--> APB_ENG
-    APB_ENG <--> Database
-    WS_SRV --- LOGGER
-    WebApp <--> Database
-    WS_SRV -.->|Broadcast Status| WebApp
+flowchart LR
+    A["ESP32 Hardware Controller\n(Dual PN532 NFC + Relay + Sensor)"] <-->|"WebSocket Protocol\n(Sub-second Real-time)"| B["WebSocket Gateway\n& APB Engine (:8080)"]
+    B <-->|"Prisma ORM\n(Transactions & Validation)"| C[("PostgreSQL Database\n(Users, Devices, Logs)")]
+    D["Next.js 16 Web Portal\n(Admin & Employee Dashboard)"] <-->|"Server Actions\n& Live Queries"| C
+    B -.->|"Telemetry Broadcast"| D
+    E["CLI Hardware Simulator\n(Virtual Testbed)"] -.->|"Simulated Scans"| B
 ```
 
 ---
@@ -257,7 +219,7 @@ The project includes an interactive terminal simulator (`pnpm simulator`) that e
 
 ```text
 ================================================
-   SMART ACCESS CONTROL - DEVICE SIMULATOR       
+      KEYFLOWY - DEVICE SIMULATOR & TESTBED      
 ================================================
 Connecting to Gateway: ws://localhost:8080
 Device MAC: 24:0A:C4:00:01:01

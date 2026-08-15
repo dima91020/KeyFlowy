@@ -8,7 +8,7 @@ export default function TermsOfServicePage() {
                 <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                         <Shield className="text-slate-900 w-5 h-5" />
-                        <span className="text-base font-bold tracking-tight text-slate-900">Smart ACS</span>
+                        <span className="text-base font-bold tracking-tight text-slate-900">KeyFlowy</span>
                     </div>
                     <Link
                         href="/"

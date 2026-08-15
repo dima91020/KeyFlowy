@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Smart ACS | Access Control & Security Platform",
+  title: "KeyFlowy | Physical Access Control & Security Platform",
   description: "Modern, streamlined access control and physical facility management platform",
 };
 

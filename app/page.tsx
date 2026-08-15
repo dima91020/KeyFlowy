@@ -41,7 +41,7 @@ export default async function LandingPage() {
                         <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white">
                             <ShieldCheckIcon className="w-5 h-5" />
                         </div>
-                        <span className="text-base font-bold tracking-tight text-slate-900">Smart ACS</span>
+                        <span className="text-base font-bold tracking-tight text-slate-900">KeyFlowy</span>
                     </div>
 
                     <div className="flex items-center gap-6">
@@ -248,7 +248,7 @@ export default async function LandingPage() {
                 <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-500">
                     <div className="flex items-center gap-2 text-slate-900 font-semibold">
                         <ShieldCheckIcon className="w-4 h-4 text-slate-900" />
-                        <span>Smart ACS Platform</span>
+                        <span>KeyFlowy Platform</span>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -256,7 +256,7 @@ export default async function LandingPage() {
                         <Link href="/terms" className="hover:text-slate-900 transition-colors">Terms of Service</Link>
                     </div>
 
-                    <p>© 2026 Smart Access Control System.</p>
+                    <p>© 2026 KeyFlowy. All rights reserved.</p>
                 </div>
             </footer>
         </div>
