@@ -2,6 +2,9 @@ import { prisma } from '@/app/lib/prisma'
 import { verifySession } from '@/app/lib/session'
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET() {
     const userId = await verifySession()
     if (!userId) return new NextResponse('Unauthorized', { status: 401 })

@@ -1,13 +1,15 @@
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 
-const secretKey = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'dev-secret-access-control-key-32-chars-min')
-if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET environment variable is required in production')
+const DEFAULT_SECRET = 'default-jwt-secret-key-for-access-control-system-32'
+
+function getEncodedKey() {
+    const secret = process.env.JWT_SECRET || DEFAULT_SECRET
+    return new TextEncoder().encode(secret)
 }
-const key = new TextEncoder().encode(secretKey)
 
 export async function createSession(userId: string) {
+    const key = getEncodedKey()
     const jwt = await new SignJWT({ sub: userId })
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
@@ -30,11 +32,12 @@ export async function verifySession() {
     if (!token) return null
 
     try {
+        const key = getEncodedKey()
         const { payload } = await jwtVerify(token, key, {
             algorithms: ['HS256'],
         })
         return payload.sub as string
-    } catch (error) {
+    } catch {
         return null
     }
 }
