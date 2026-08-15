@@ -523,4 +523,4 @@ wss.on('connection', (socket: WebSocket) => {
     });
 });
 
-logger.info(`Smart ACS WebSocket Gateway running on ws://localhost:${PORT}`);
+logger.info(`KeyFlowy WebSocket Gateway running on ws://localhost:${PORT}`);

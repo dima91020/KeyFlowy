@@ -6,7 +6,7 @@ const DEFAULT_MAC = process.env.DEVICE_MAC || '24:0A:C4:00:01:01';
 const DEVICE_KEY = process.env.DEVICE_KEY || 'dev_key_main_turnstile_01';
 
 console.log('\x1b[36m%s\x1b[0m', '================================================');
-console.log('\x1b[36m%s\x1b[0m', '   SMART ACCESS CONTROL - DEVICE SIMULATOR       ');
+console.log('\x1b[36m%s\x1b[0m', '      KEYFLOWY - DEVICE SIMULATOR & TESTBED      ');
 console.log('\x1b[36m%s\x1b[0m', '================================================');
 console.log(`Connecting to Gateway: ${WS_URL}`);
 console.log(`Device MAC: ${DEFAULT_MAC}`);

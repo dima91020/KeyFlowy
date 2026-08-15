@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log('[Seed] Starting database seeding for Smart ACS...');
+    console.log('[Seed] Starting database seeding for KeyFlowy...');
 
     // Clear existing records to ensure clean demo environment
     await prisma.log.deleteMany();

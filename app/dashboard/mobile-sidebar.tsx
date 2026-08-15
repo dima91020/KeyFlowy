@@ -56,7 +56,7 @@ export function MobileSidebar() {
                         <div className="w-7 h-7 bg-slate-900 rounded-lg flex items-center justify-center text-white">
                             <ShieldCheckIcon className="w-4 h-4" />
                         </div>
-                        <span className="text-base font-bold text-slate-900 tracking-tight">Smart ACS</span>
+                        <span className="text-base font-bold text-slate-900 tracking-tight">KeyFlowy</span>
                     </div>
                     <button
                         onClick={() => setIsOpen(false)}
