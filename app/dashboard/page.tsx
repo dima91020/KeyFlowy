@@ -6,7 +6,7 @@ import {
     UsersIcon,
     DocumentTextIcon,
     ArrowRightIcon,
-    ComputerDesktopIcon
+    CpuChipIcon
 } from '@heroicons/react/24/outline'
 import { RecentActivityWrapper } from './recent-activity-wrapper'
 import { getRecentLogsAction, getWeeklyStatsAction, getPeakHoursAction, getSecurityStatsAction, LogWithDetails } from './actions'
@@ -51,61 +51,58 @@ export default async function Dashboard() {
         const securityStats = await getSecurityStatsAction(user.id)
 
         return (
-            <div className="p-6 space-y-8 text-white max-w-[1600px] mx-auto">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-200">
                     <div>
-                        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-                        <p className="text-dark-muted mt-1">
-                            Welcome back, <span className="text-white font-medium">{user.name ?? 'Administrator'}</span>
+                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Overview</h1>
+                        <p className="text-slate-500 text-sm mt-0.5">
+                            Welcome back, <span className="text-slate-900 font-medium">{user.name ?? 'Administrator'}</span>
                         </p>
                     </div>
-                    <div className="text-sm text-dark-muted font-mono bg-dark-800 px-3 py-1 rounded-lg border border-dark-700">
-                        {new Date().toLocaleDateString('en-EN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    <div className="text-xs text-slate-500 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm font-medium">
+                        {new Date().toLocaleDateString('en-GB', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-dark-800 p-6 rounded-2xl border border-dark-700 shadow-lg relative overflow-hidden group hover:border-dark-600 transition-all">
-                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <UsersIcon className="w-20 h-20" />
+                {/* Key Metric Stats */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="flex items-center justify-between text-slate-500 mb-2">
+                            <span className="text-xs font-medium uppercase tracking-wider">Total Employees</span>
+                            <UsersIcon className="w-4 h-4 text-slate-400" />
                         </div>
-                        <h2 className="text-dark-muted font-medium flex items-center gap-2">
-                            <UsersIcon className="w-5 h-5" /> Total Employees
-                        </h2>
-                        <p className="text-4xl font-bold text-white mt-4">{totalUsers}</p>
+                        <p className="text-3xl font-bold text-slate-900 tracking-tight">{totalUsers}</p>
                     </div>
 
-                    <div className="bg-dark-800 p-6 rounded-2xl border border-dark-700 shadow-lg relative overflow-hidden group hover:border-dark-600 transition-all">
-                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <DocumentTextIcon className="w-20 h-20" />
+                    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="flex items-center justify-between text-slate-500 mb-2">
+                            <span className="text-xs font-medium uppercase tracking-wider">Access Logs</span>
+                            <DocumentTextIcon className="w-4 h-4 text-slate-400" />
                         </div>
-                        <h2 className="text-dark-muted font-medium flex items-center gap-2">
-                            <DocumentTextIcon className="w-5 h-5" /> Access Logs
-                        </h2>
-                        <p className="text-4xl font-bold text-white mt-4">{totalLogs}</p>
+                        <p className="text-3xl font-bold text-slate-900 tracking-tight">{totalLogs}</p>
                     </div>
 
-                    <div className="bg-dark-800 p-6 rounded-2xl border border-dark-700 shadow-lg relative overflow-hidden group hover:border-green-500/30 transition-all">
-                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-green-500">
-                            <ComputerDesktopIcon className="w-20 h-20" />
+                    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="flex items-center justify-between text-slate-500 mb-2">
+                            <span className="text-xs font-medium uppercase tracking-wider">Active Devices</span>
+                            <CpuChipIcon className="w-4 h-4 text-slate-400" />
                         </div>
-                        <h2 className="text-dark-muted font-medium flex items-center gap-2">
-                            <ComputerDesktopIcon className="w-5 h-5" /> Active Systems
-                        </h2>
-                        <div className="flex items-end gap-3 mt-4">
-                            <p className={`text-4xl font-bold ${activeSystems > 0 ? 'text-green-400' : 'text-dark-muted'}`}>{activeSystems}</p>
-                            <span className="text-sm text-dark-muted mb-1.5">devices online</span>
+                        <div className="flex items-baseline gap-2">
+                            <p className="text-3xl font-bold text-slate-900 tracking-tight">{activeSystems}</p>
+                            <span className="text-xs text-slate-500 font-medium">online</span>
                         </div>
                     </div>
                 </div>
 
+                {/* Live Devices Status */}
                 <LiveDevices initialDevices={devices} />
 
-                <div className="w-full">
-                    <WeeklyChart data={weeklyStats} />
-                </div>
+                {/* Weekly Traffic Chart */}
+                <WeeklyChart data={weeklyStats} />
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Secondary Charts: Peak Hours + Security Breakdown */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                     <div className="lg:col-span-2">
                         <PeakHoursChart data={peakHours} />
                     </div>
@@ -114,26 +111,49 @@ export default async function Dashboard() {
                     </div>
                 </div>
 
-                <div className="grid lg:grid-cols-3 gap-8">
-                    <RecentActivityWrapper initialLogs={initialLogs} adminId={user.id} />
+                {/* Recent Activity & Quick Navigation */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <div className="lg:col-span-2">
+                        <RecentActivityWrapper initialLogs={initialLogs} adminId={user.id} />
+                    </div>
 
                     <div className="space-y-4">
-                        <h3 className="text-xl font-bold mb-6 px-1">Quick Actions</h3>
-                        <Link href="/dashboard/users" className="block bg-primary hover:bg-primary-hover p-4 rounded-xl shadow-lg shadow-blue-500/20 transition-all group relative overflow-hidden">
-                            <div className="relative z-10 flex justify-between items-center">
-                                <span className="font-bold text-lg">Manage Users</span>
-                                <ArrowRightIcon className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-                            </div>
-                            <p className="relative z-10 text-blue-100/80 text-sm mt-1">Add, edit or block employees.</p>
-                            <div className="absolute -bottom-4 -right-4 bg-white/10 w-24 h-24 rounded-full blur-xl group-hover:bg-white/20 transition-all" />
-                        </Link>
-                        <Link href="/dashboard/logs" className="block bg-dark-800 hover:bg-dark-700 border border-dark-700 p-4 rounded-xl transition-all group">
-                            <div className="flex justify-between items-center">
-                                <span className="font-bold text-lg">View Full Logs</span>
-                                <ArrowRightIcon className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-                            </div>
-                            <p className="text-dark-muted text-sm mt-1">Check full history and exports.</p>
-                        </Link>
+                        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Quick Actions</h3>
+
+                            <Link
+                                href="/dashboard/users"
+                                className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors group"
+                            >
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-900">Manage Users</p>
+                                    <p className="text-xs text-slate-500">Add, edit, or revoke credentials</p>
+                                </div>
+                                <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-slate-900 transition-colors" />
+                            </Link>
+
+                            <Link
+                                href="/dashboard/devices"
+                                className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors group"
+                            >
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-900">Manage Devices</p>
+                                    <p className="text-xs text-slate-500">Configure relays & unlock doors</p>
+                                </div>
+                                <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-slate-900 transition-colors" />
+                            </Link>
+
+                            <Link
+                                href="/dashboard/logs"
+                                className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors group"
+                            >
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-900">View Full Logs</p>
+                                    <p className="text-xs text-slate-500">Audit trail and CSV exports</p>
+                                </div>
+                                <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-slate-900 transition-colors" />
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </div>

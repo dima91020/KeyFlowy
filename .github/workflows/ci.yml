@@ -1,0 +1,42 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  validate-and-test:
+    name: Lint, Typecheck & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm prisma generate
+
+      - name: Run Unit Tests
+        run: pnpm test
+
+      - name: Run Next.js Build Check
+        run: pnpm build
+        env:
+          POSTGRES_PRISMA_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+          POSTGRES_URL_NON_POOLING: "postgresql://dummy:dummy@localhost:5432/dummy"
+          JWT_SECRET: "ci-build-test-secret-key-32-chars-long"

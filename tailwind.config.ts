@@ -9,16 +9,11 @@ const config: Config = {
     theme: {
         extend: {
             colors: {
-                dark: {
-                    900: '#0B0F19',
-                    800: '#111827',
-                    700: '#1F2937',
-                    text: '#F3F4F6',
-                    muted: '#9CA3AF',
-                },
                 primary: {
-                    DEFAULT: '#3B82F6',
-                    hover: '#2563EB',
+                    DEFAULT: '#0F172A',
+                    hover: '#1E293B',
+                    blue: '#2563EB',
+                    'blue-hover': '#1D4ED8',
                 }
             },
         },

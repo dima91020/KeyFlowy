@@ -16,11 +16,11 @@ const CustomLegend = ({ payload }: CustomLegendProps) => {
     if (!payload) return null;
 
     return (
-        <ul className="flex justify-center items-center gap-6 pt-4 w-full m-0 p-0">
+        <ul className="flex justify-center items-center gap-6 pt-3 w-full m-0 p-0">
             {payload.map((entry, index) => (
-                <li key={`item-${index}`} className="flex items-center gap-2 text-sm text-gray-300">
+                <li key={`item-${index}`} className="flex items-center gap-2 text-xs font-medium text-slate-600">
                     <div
-                        className={`w-3 h-3 ${entry.value === 'Work Hours' ? 'rounded-sm' : 'rounded-full'}`}
+                        className={`w-2.5 h-2.5 ${entry.value === 'Work Hours' ? 'rounded-xs' : 'rounded-full'}`}
                         style={{ backgroundColor: entry.color }}
                     />
                     {entry.value}
@@ -30,42 +30,42 @@ const CustomLegend = ({ payload }: CustomLegendProps) => {
     );
 }
 
-// Додали showWorkHours?: boolean
 export function WeeklyChart({ data, showWorkHours = false }: { data: DailyStat[], showWorkHours?: boolean }) {
     return (
-        <div className="bg-dark-800 border border-dark-700 rounded-2xl p-6 shadow-lg h-[400px] flex flex-col w-full">
-            {/* Динамічний заголовок */}
-            <h3 className="text-xl font-bold text-white mb-6">
-                {showWorkHours ? "Weekly Traffic & Time" : "Weekly Traffic"}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm h-[360px] flex flex-col w-full">
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4">
+                {showWorkHours ? "Weekly Traffic & Work Hours" : "Weekly Access Traffic"}
             </h3>
 
             <div className="flex-1 w-full h-full min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                         <XAxis
                             dataKey="date"
-                            stroke="#9CA3AF"
-                            fontSize={12}
+                            stroke="#94A3B8"
+                            fontSize={11}
                             tickLine={false}
                             axisLine={false}
-                            dy={10}
+                            dy={8}
                         />
                         <YAxis
-                            stroke="#9CA3AF"
-                            fontSize={12}
+                            stroke="#94A3B8"
+                            fontSize={11}
                             tickLine={false}
                             axisLine={false}
                         />
                         <Tooltip
                             contentStyle={{
-                                backgroundColor: '#1F2937',
-                                borderColor: '#374151',
-                                borderRadius: '0.75rem',
-                                color: '#fff'
+                                backgroundColor: '#FFFFFF',
+                                borderColor: '#E2E8F0',
+                                borderRadius: '0.5rem',
+                                color: '#0F172A',
+                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                                fontSize: '12px'
                             }}
-                            itemStyle={{ fontSize: '14px', fontWeight: 500 }}
-                            cursor={{ fill: '#374151', opacity: 0.4 }}
+                            itemStyle={{ fontWeight: 500 }}
+                            cursor={{ fill: '#F8FAFC' }}
                         />
 
                         <Legend
@@ -73,18 +73,17 @@ export function WeeklyChart({ data, showWorkHours = false }: { data: DailyStat[]
                             wrapperStyle={{ left: 0, width: '100%' }}
                         />
 
-                        <Bar dataKey="entries" name="Entries" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                        <Bar dataKey="exits" name="Exits" fill="#8B5CF6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                        <Bar dataKey="entries" name="Entries" fill="#0F172A" radius={[3, 3, 0, 0]} maxBarSize={32} />
+                        <Bar dataKey="exits" name="Exits" fill="#94A3B8" radius={[3, 3, 0, 0]} maxBarSize={32} />
 
-                        {/* Малюємо лінію ТІЛЬКИ якщо showWorkHours === true */}
                         {showWorkHours && (
                             <Line
                                 type="monotone"
                                 dataKey="workHours"
                                 name="Work Hours"
-                                stroke="#10B981"
-                                strokeWidth={3}
-                                dot={{ r: 4, fill: "#10B981", strokeWidth: 2, stroke: "#1F2937" }}
+                                stroke="#16A34A"
+                                strokeWidth={2}
+                                dot={{ r: 3.5, fill: "#16A34A", strokeWidth: 1.5, stroke: "#FFFFFF" }}
                             />
                         )}
                     </ComposedChart>

@@ -15,7 +15,6 @@ export async function GET() {
         include: { user: true, device: true }
     })
 
-    // Спеціальний символ, який каже Excel, що файл має кодування UTF-8
     const BOM = '\uFEFF'
 
     const csvHeaders = ['Date', 'Time', 'User', 'Card UID', 'Device', 'Direction', 'Status', 'Event Type']
@@ -29,11 +28,9 @@ export async function GET() {
         const status = log.accessGranted ? 'Granted' : 'Denied'
         const eventType = log.eventType
 
-        // Змінили розділювач на крапку з комою (;)
         return [date, time, `"${userName}"`, cardUid, `"${deviceName}"`, direction, status, eventType].join(';')
     })
 
-    // Додаємо BOM на самий початок і з'єднуємо заголовки та рядки через ентер
     const csvContent = BOM + [csvHeaders.join(';'), ...csvRows].join('\n')
 
     return new NextResponse(csvContent, {

@@ -29,8 +29,7 @@ export async function setNewPassword(token: string, newPassword: string) {
         });
 
         return { success: "Password successfully changed!" };
-    } catch (error: any) {
-        console.error(error);
-        return { error: `Server error: ${error.message}` };
+    } catch {
+        return { error: "Server error: Failed to update password" };
     }
 }

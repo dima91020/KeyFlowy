@@ -3,14 +3,9 @@
 import { updateUser, UserState } from '../../actions'
 import { useActionState } from 'react'
 import {
-    UserIcon,
-    EnvelopeIcon,
-    CreditCardIcon,
-    BriefcaseIcon,
     ArrowDownTrayIcon,
     ArrowPathIcon,
     LockClosedIcon,
-    MapPinIcon,
     CalendarIcon,
     ClockIcon
 } from '@heroicons/react/24/outline'
@@ -71,7 +66,6 @@ export function EditUserForm({ user, currentUserId }: EditFormProps) {
     const [state, action, isPending] = useActionState(updateUser, initialState)
 
     const isSelf = user.id === currentUserId;
-
     const dateOptions = generateDateOptions()
     const timeOptions = generateTimeOptions()
 
@@ -89,97 +83,75 @@ export function EditUserForm({ user, currentUserId }: EditFormProps) {
     const initialFrom = getInitialDateTime(user.validFrom)
     const initialUntil = getInitialDateTime(user.validUntil)
 
-    // Рятівний клас для вимкнення білого фону при автозаповненні
-    const autofillFix = "[&:-webkit-autofill]:[-webkit-text-fill-color:white] [&:-webkit-autofill]:[transition:background-color_9999s_ease-in-out_0s]";
-
     return (
-        <form action={action} className="space-y-6">
+        <form action={action} className="space-y-4">
             <input type="hidden" name="id" value={user.id} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <label className="text-sm text-dark-muted flex items-center gap-2">
-                        <UserIcon className="w-4 h-4" /> Full Name
-                    </label>
+                <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700">Full Name</label>
                     <input
                         name="name"
                         defaultValue={user.name || ''}
                         className={clsx(
-                            "w-full bg-dark-900 border rounded-xl px-4 py-3 text-white focus:border-primary outline-none transition-colors",
-                            autofillFix,
-                            state.errors?.name ? "border-red-500" : "border-dark-700"
+                            "w-full bg-slate-50 border rounded-lg px-3 py-2 text-xs text-slate-900 focus:bg-white focus:border-slate-900 outline-none transition-colors",
+                            state.errors?.name ? "border-rose-400" : "border-slate-200"
                         )}
                     />
-                    {state.errors?.name && <p className="text-xs text-red-400">{state.errors.name[0]}</p>}
+                    {state.errors?.name && <p className="text-xs text-rose-600">{state.errors.name[0]}</p>}
                 </div>
-                <div className="space-y-2">
-                    <label className="text-sm text-dark-muted flex items-center gap-2">
-                        <BriefcaseIcon className="w-4 h-4" /> Job Title
-                    </label>
+                <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700">Job Title</label>
                     <input
                         name="jobTitle"
                         defaultValue={user.jobTitle || ''}
-                        className={clsx(
-                            "w-full bg-dark-900 border border-dark-700 rounded-xl px-4 py-3 text-white focus:border-primary outline-none transition-colors",
-                            autofillFix
-                        )}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:bg-white focus:border-slate-900 outline-none transition-colors"
                     />
                 </div>
             </div>
 
             {user.role !== 'GUEST' && (
-                <div className="space-y-2">
-                    <label className="text-sm text-dark-muted flex items-center gap-2">
-                        <EnvelopeIcon className="w-4 h-4" /> Email Address
-                    </label>
+                <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700">Email Address</label>
                     <input
                         name="email"
                         type="email"
                         defaultValue={user.email || ''}
                         className={clsx(
-                            "w-full bg-dark-900 border rounded-xl px-4 py-3 text-white focus:border-primary outline-none transition-colors",
-                            autofillFix,
-                            state.errors?.email ? "border-red-500" : "border-dark-700"
+                            "w-full bg-slate-50 border rounded-lg px-3 py-2 text-xs text-slate-900 focus:bg-white focus:border-slate-900 outline-none transition-colors",
+                            state.errors?.email ? "border-rose-400" : "border-slate-200"
                         )}
                     />
-                    {state.errors?.email && <p className="text-xs text-red-400">{state.errors.email[0]}</p>}
+                    {state.errors?.email && <p className="text-xs text-rose-600">{state.errors.email[0]}</p>}
                 </div>
             )}
 
-            <div className="space-y-2">
-                <label className="text-sm text-dark-muted flex items-center gap-2">
-                    <CreditCardIcon className="w-4 h-4" /> RFID Card UID
-                </label>
+            <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">RFID Card UID</label>
                 <input
                     name="cardUid"
                     defaultValue={user.cardUid || ''}
-                    placeholder="Scanned UID will appear here..."
-                    className={clsx(
-                        "w-full bg-dark-900 border border-dark-700 rounded-xl px-4 py-3 text-white font-mono focus:border-primary outline-none transition-colors",
-                        autofillFix
-                    )}
+                    placeholder="UID..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-mono focus:bg-white focus:border-slate-900 outline-none transition-colors uppercase tracking-wider"
                 />
-                <p className="text-xs text-dark-muted">Use the &quot;Scan&quot; function on the Add User page to find new card UIDs.</p>
             </div>
 
             {user.role === 'GUEST' && (
-                <div className="space-y-4 bg-dark-900/40 p-5 rounded-2xl border border-dark-700">
-                    <h3 className="text-white font-medium flex items-center gap-2 text-sm">
-                        <ClockIcon className="w-4 h-4 text-yellow-500" />
-                        Time Restrictions
+                <div className="space-y-3 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+                    <h3 className="text-slate-800 font-semibold flex items-center gap-1.5 text-xs">
+                        <ClockIcon className="w-4 h-4 text-slate-500" />
+                        Pass Validity Window
                     </h3>
 
-                    <div className="grid grid-cols-1 gap-5">
-                        <div className="space-y-2">
-                            <label className="text-xs text-dark-muted flex items-center gap-1.5">
-                                Valid From
-                            </label>
-                            <div className="grid grid-cols-[1fr_105px] gap-2">
+                    <div className="grid grid-cols-1 gap-3">
+                        <div className="space-y-1">
+                            <span className="text-[11px] font-medium text-slate-500">Valid From</span>
+                            <div className="grid grid-cols-[1fr_95px] gap-2">
                                 <CustomSelect
                                     name="validFromDate"
                                     options={dateOptions}
                                     defaultValue={initialFrom.date || dateOptions[5].value}
-                                    icon={<CalendarIcon className="w-4 h-4" />}
+                                    icon={<CalendarIcon className="w-3.5 h-3.5" />}
                                 />
                                 <CustomSelect
                                     name="validFromTime"
@@ -189,16 +161,14 @@ export function EditUserForm({ user, currentUserId }: EditFormProps) {
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-xs text-dark-muted flex items-center gap-1.5">
-                                Valid Until
-                            </label>
-                            <div className="grid grid-cols-[1fr_105px] gap-2">
+                        <div className="space-y-1">
+                            <span className="text-[11px] font-medium text-slate-500">Valid Until</span>
+                            <div className="grid grid-cols-[1fr_95px] gap-2">
                                 <CustomSelect
                                     name="validUntilDate"
                                     options={dateOptions}
                                     defaultValue={initialUntil.date || dateOptions[6].value}
-                                    icon={<CalendarIcon className="w-4 h-4" />}
+                                    icon={<CalendarIcon className="w-3.5 h-3.5" />}
                                 />
                                 <CustomSelect
                                     name="validUntilTime"
@@ -206,61 +176,53 @@ export function EditUserForm({ user, currentUserId }: EditFormProps) {
                                     defaultValue={initialUntil.time || '18:00'}
                                 />
                             </div>
-                            {state.errors?.validUntilTime && <p className="text-xs text-red-400">{state.errors.validUntilTime[0]}</p>}
+                            {state.errors?.validUntilTime && <p className="text-xs text-rose-600">{state.errors.validUntilTime[0]}</p>}
                         </div>
                     </div>
                 </div>
             )}
 
-            <hr className="border-dark-700" />
-
-            <div className="space-y-4">
-                <div className={clsx(
-                    "flex items-center justify-between bg-dark-900 p-4 rounded-xl border transition-colors",
-                    isSelf ? "border-yellow-500/20 opacity-80" : "border-dark-700"
-                )}>
+            <div className="space-y-3 pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
                     <div>
-                        <h3 className="text-white font-medium flex items-center gap-2 text-sm">
-                            Account Status
-                            {isSelf && <span className="text-[10px] bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded border border-yellow-500/20 uppercase font-bold">Protected</span>}
+                        <h3 className="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
+                            Account Access State
+                            {isSelf && <span className="text-[10px] text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded font-normal">Protected</span>}
                         </h3>
-                        <p className="text-sm text-dark-muted">
-                            {isSelf
-                                ? "You cannot block your own account."
-                                : "Disable to block access without deleting data."}
+                        <p className="text-[11px] text-slate-500">
+                            {isSelf ? "Self-deactivation is disabled." : "Toggle active state to permit or restrict card scans."}
                         </p>
                     </div>
 
                     {isSelf ? (
-                        <LockClosedIcon className="w-6 h-6 text-dark-muted" />
+                        <LockClosedIcon className="w-4 h-4 text-slate-400" />
                     ) : (
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" name="isActive" defaultChecked={user.isActive} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                            <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-slate-900"></div>
                         </label>
                     )}
                 </div>
 
-                <div className="flex items-center justify-between bg-dark-900 p-4 rounded-xl border border-dark-700">
+                <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
                     <div>
-                        <h3 className="text-white font-medium flex items-center gap-2 text-sm">
-                            <MapPinIcon className="w-4 h-4 text-blue-400" />
-                            Location Status (Anti-passback)
+                        <h3 className="text-xs font-semibold text-slate-900">
+                            Location Status (Anti-Passback Override)
                         </h3>
-                        <p className="text-sm text-dark-muted">
-                            Manual override. Turn off if the user left without scanning their card.
+                        <p className="text-[11px] text-slate-500">
+                            Manual toggle: switch location state if user left without scanning.
                         </p>
                     </div>
 
                     <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" name="isInside" defaultChecked={user.isInside} className="sr-only peer" />
-                        <div className="w-11 h-6 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                        <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-slate-900"></div>
                     </label>
                 </div>
             </div>
 
             {state.message && (
-                <div className="text-red-400 text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20">
+                <div className="text-rose-700 text-xs bg-rose-50 p-2.5 rounded-lg border border-rose-200">
                     {state.message}
                 </div>
             )}
@@ -268,9 +230,9 @@ export function EditUserForm({ user, currentUserId }: EditFormProps) {
             <button
                 type="submit"
                 disabled={isPending}
-                className="w-full bg-primary hover:bg-primary-hover text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-70"
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
             >
-                {isPending ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <ArrowDownTrayIcon className="w-5 h-5" />}
+                {isPending ? <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" /> : <ArrowDownTrayIcon className="w-3.5 h-3.5" />}
                 {isPending ? 'Saving...' : 'Save Changes'}
             </button>
         </form>

@@ -2,7 +2,7 @@
 
 import { z } from 'zod'
 import { prisma } from '@/app/lib/prisma'
-import { hash } from 'bcrypt'
+import { hash } from 'bcryptjs'
 import { redirect } from 'next/navigation'
 import { Prisma } from '@prisma/client'
 import { createSession } from '@/app/lib/session'
@@ -56,7 +56,6 @@ export async function registerAdminAction(prevState: RegisterState, formData: Fo
     const hashedPassword = await hash(password, 10)
 
     try {
-        // Зберігаємо створеного користувача у змінну
         const newUser = await prisma.user.create({
             data: {
                 name,
@@ -66,11 +65,9 @@ export async function registerAdminAction(prevState: RegisterState, formData: Fo
             }
         })
 
-        // Одразу створюємо сесію (куку) для цього адміна
         await createSession(newUser.id)
 
     } catch (error) {
-        // Точна перевірка на дублікат email за допомогою вбудованого класу Prisma
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
             if (error.code === 'P2002') {
                 return {
@@ -81,14 +78,11 @@ export async function registerAdminAction(prevState: RegisterState, formData: Fo
             }
         }
 
-        console.error("Помилка створення адміна:", error)
-
         return {
             message: "Database Error: Failed to create admin account.",
             inputs: { name: rawData.name, email: rawData.email }
         }
     }
 
-    // Тепер редірект спрацює без проблем, бо сесія вже існує
     redirect('/dashboard')
 }

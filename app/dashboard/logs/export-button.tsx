@@ -10,39 +10,26 @@ export function ExportButton() {
     const handleExport = async () => {
         try {
             setIsExporting(true)
-            setIsSuccess(false) // Скидаємо стан успіху, якщо раптом натиснули вдруге
+            setIsSuccess(false)
 
-            // Робимо запит до нашого API
             const response = await fetch('/api/export/logs')
             if (!response.ok) throw new Error('Export failed')
 
-            // Отримуємо файл у вигляді Blob (бінарні дані)
             const blob = await response.blob()
-
-            // Створюємо тимчасове посилання на файл в пам'яті браузера
             const url = window.URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
             a.download = 'access_logs.csv'
-
-            // Симулюємо клік для завантаження
             document.body.appendChild(a)
             a.click()
-
-            // Прибираємо сліди
             window.URL.revokeObjectURL(url)
             document.body.removeChild(a)
 
-            // Вмикаємо зелену кнопку з галочкою
             setIsSuccess(true)
-
-            // Чекаємо 4 секунди і повертаємо кнопку в нормальний стан
             setTimeout(() => {
                 setIsSuccess(false)
-            }, 4000)
-
-        } catch (error) {
-            console.error('Error exporting logs:', error)
+            }, 3000)
+        } catch {
             alert('Failed to export logs. Please try again.')
         } finally {
             setIsExporting(false)
@@ -52,23 +39,22 @@ export function ExportButton() {
     return (
         <button
             onClick={handleExport}
-            // Блокуємо кнопку, поки йде завантаження АБО поки висить зелена галочка
             disabled={isExporting || isSuccess}
-            className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all w-full sm:w-auto outline-none focus:outline-none ${
+            className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-colors w-full sm:w-auto shadow-sm border ${
                 isSuccess
-                    ? 'bg-green-500/10 text-green-400 border border-green-500/30'
-                    : 'bg-dark-800 hover:bg-dark-700 text-white border border-dark-700 disabled:opacity-50 disabled:cursor-not-allowed'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 disabled:opacity-50 disabled:cursor-not-allowed'
             }`}
         >
             {isExporting ? (
-                <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
             ) : isSuccess ? (
-                <CheckIcon className="w-4 h-4" />
+                <CheckIcon className="w-3.5 h-3.5 text-emerald-600" />
             ) : (
-                <ArrowDownTrayIcon className="w-4 h-4" />
+                <ArrowDownTrayIcon className="w-3.5 h-3.5 text-slate-500" />
             )}
 
-            {isExporting ? 'Exporting...' : isSuccess ? 'Exported!' : 'Export CSV'}
+            {isExporting ? 'Exporting...' : isSuccess ? 'Downloaded CSV' : 'Export CSV'}
         </button>
     )
 }

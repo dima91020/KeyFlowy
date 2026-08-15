@@ -4,46 +4,43 @@ import Link from 'next/link'
 
 export default async function LoginPage() {
     return (
-        <div className="min-h-screen bg-dark-900 flex items-center justify-center p-4">
-
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
             <div className="w-full max-w-sm relative z-10">
-
                 <Link
                     href="/"
-                    className="inline-flex items-center gap-1.5 text-sm font-medium text-dark-muted hover:text-white mb-6 transition-colors w-fit"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 mb-6 transition-colors"
                 >
-                    <ChevronLeftIcon className="w-4 h-4" />
+                    <ChevronLeftIcon className="w-3.5 h-3.5" />
                     <span>Back to Home</span>
                 </Link>
 
-                <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-dark-800 border border-dark-700 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                        <ShieldCheckIcon className="text-primary w-8 h-8" />
+                <div className="text-center mb-6">
+                    <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center mx-auto mb-4 text-white shadow-sm">
+                        <ShieldCheckIcon className="w-6 h-6" />
                     </div>
-                    <h1 className="text-2xl font-semibold text-white mb-2">Welcome Back</h1>
-                    <p className="text-dark-muted text-sm">Sign in to access the system.</p>
+                    <h1 className="text-xl font-bold text-slate-900">Sign In</h1>
+                    <p className="text-xs text-slate-500 mt-1">Enter your credentials to access the portal.</p>
                 </div>
 
-                <div className="bg-dark-800 border border-dark-700 rounded-2xl p-8 shadow-xl">
+                <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
                     <LoginForm />
 
-                    <div className="mt-5 text-center">
+                    <div className="mt-4 text-center">
                         <Link
                             href="/forgot-password"
-                            className="text-sm text-dark-muted hover:text-white transition-colors"
+                            className="text-xs text-slate-500 hover:text-slate-900 transition-colors"
                         >
                             Forgot your password?
                         </Link>
                     </div>
                 </div>
 
-                <p className="text-center text-dark-muted text-sm mt-6">
-                    New organization?{' '}
-                    <Link href="/register" className="text-primary hover:underline transition-all">
-                        Register here
+                <p className="text-center text-xs text-slate-500 mt-4">
+                    Need an account?{' '}
+                    <Link href="/register" className="text-slate-900 font-semibold hover:underline">
+                        Register organization
                     </Link>
                 </p>
-
             </div>
         </div>
     )

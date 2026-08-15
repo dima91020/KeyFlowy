@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import {
-    ServerStackIcon,
     WifiIcon,
     SignalSlashIcon,
     LockOpenIcon,
     LockClosedIcon
 } from '@heroicons/react/24/outline'
+import { Badge } from '@/app/ui/badge'
 
 type Device = {
     id: string;
@@ -17,7 +17,6 @@ type Device = {
 }
 
 export function LiveDevices({ initialDevices }: { initialDevices: Device[] }) {
-    // Зберігаємо стан дверей у вигляді словника: { "MAC_АДРЕСА": "OPENED" | "CLOSED" }
     const [doorStates, setDoorStates] = useState<Record<string, 'OPENED' | 'CLOSED'>>({})
 
     useEffect(() => {
@@ -27,70 +26,68 @@ export function LiveDevices({ initialDevices }: { initialDevices: Device[] }) {
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data)
-
-                // Якщо прийшло оновлення дверей і вказано MAC-адресу девайсу
                 if (data.type === 'DOOR_UPDATE' && data.mac) {
                     setDoorStates(prev => ({
                         ...prev,
                         [data.mac]: data.state
                     }))
                 }
-            } catch (e) {
-                console.error('WS Error', e)
+            } catch {
+                // Ignore malformed WS frames
             }
         }
 
-        return () => ws.close()
+        return () => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.close()
+            }
+        }
     }, [])
 
     return (
-        <div className="bg-dark-800 border border-dark-700 rounded-2xl p-6 shadow-lg">
-            <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold flex items-center gap-2 text-white">
-                    <ServerStackIcon className="w-5 h-5 text-purple-400" />
-                    Live Devices Status
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                    Live Hardware Telemetry
                 </h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                 {initialDevices.map((device) => {
                     const isOpened = doorStates[device.macAddress] === 'OPENED'
 
                     return (
-                        <div key={device.id} className="bg-dark-900 border border-dark-700 rounded-xl p-4 flex items-center justify-between transition-colors hover:border-dark-600">
-
+                        <div key={device.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 flex items-center justify-between transition-colors">
                             <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-lg ${device.isOnline ? 'bg-blue-500/10 text-blue-400' : 'bg-dark-800 text-dark-muted'}`}>
-                                    {device.isOnline ? <WifiIcon className="w-5 h-5" /> : <SignalSlashIcon className="w-5 h-5" />}
+                                <div className={`p-2 rounded-lg ${device.isOnline ? 'bg-white border border-slate-200 text-slate-700' : 'bg-slate-200 text-slate-400'}`}>
+                                    {device.isOnline ? <WifiIcon className="w-4 h-4" /> : <SignalSlashIcon className="w-4 h-4" />}
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-white">{device.name}</p>
-                                    <p className="text-xs text-dark-muted font-mono">{device.macAddress}</p>
+                                    <p className="text-sm font-semibold text-slate-900">{device.name}</p>
+                                    <p className="text-xs text-slate-500 font-mono">{device.macAddress}</p>
                                 </div>
                             </div>
 
-                            {/* Статус дверей показуємо тільки якщо девайс онлайн */}
                             {device.isOnline ? (
-                                <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold tracking-wide border transition-all duration-300 ${
-                                    isOpened
-                                        ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.15)]'
-                                        : 'bg-green-500/10 text-green-500 border-green-500/20'
-                                }`}>
-                                    {isOpened ? <LockOpenIcon className="w-4 h-4" /> : <LockClosedIcon className="w-4 h-4" />}
-                                    {isOpened ? 'OPEN' : 'CLOSED'}
-                                </div>
+                                <Badge
+                                    variant={isOpened ? 'warning' : 'success'}
+                                    dot
+                                    pulse={isOpened}
+                                    icon={isOpened ? <LockOpenIcon className="w-3.5 h-3.5" /> : <LockClosedIcon className="w-3.5 h-3.5" />}
+                                >
+                                    {isOpened ? 'Open' : 'Closed'}
+                                </Badge>
                             ) : (
-                                <span className="text-xs font-bold text-dark-muted px-2.5 py-1.5 bg-dark-800 rounded-lg border border-dark-700">
-                                    OFFLINE
-                                </span>
+                                <Badge variant="neutral" dot>
+                                    Offline
+                                </Badge>
                             )}
-
                         </div>
                     )
                 })}
 
                 {initialDevices.length === 0 && (
-                    <div className="col-span-full text-center py-8 text-sm text-dark-muted border border-dashed border-dark-700 rounded-xl">
+                    <div className="col-span-full text-center py-6 text-xs text-slate-400 border border-dashed border-slate-200 rounded-lg">
                         No devices configured yet.
                     </div>
                 )}

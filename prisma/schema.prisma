@@ -33,12 +33,18 @@ model User {
 
   validFrom      DateTime?
   validUntil     DateTime?
+
+  @@index([adminId])
+  @@index([role])
+  @@index([cardUid])
+  @@index([isActive])
 }
 
 model Device {
   id           String   @id @default(cuid())
   name         String
   macAddress   String   @unique
+  deviceKey    String?  @default(cuid())
   description  String?
   isOnline     Boolean  @default(false)
   lastSeen     DateTime @default(now())
@@ -54,6 +60,10 @@ model Device {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   logs         Log[]
+
+  @@index([adminId])
+  @@index([macAddress])
+  @@index([isOnline, lastSeen])
 }
 
 model Log {
@@ -72,6 +82,12 @@ model Log {
   device        Device?  @relation(fields: [deviceId], references: [id], onDelete: SetNull)
   direction     String?
   eventType     String?  @default("ACCESS")
+
+  @@index([timestamp(sort: Desc)])
+  @@index([deviceId, timestamp(sort: Desc)])
+  @@index([userId, timestamp(sort: Desc)])
+  @@index([eventType])
+  @@index([accessGranted])
 }
 
 model PasswordResetToken {

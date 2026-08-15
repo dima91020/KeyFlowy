@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 import { verifySession } from '@/app/lib/session'
-import { hash } from 'bcrypt'
+import { hash } from 'bcryptjs'
 import { randomBytes } from 'crypto'
 
 export type UserState = {

@@ -7,7 +7,8 @@ import {
     EnvelopeIcon,
     LockClosedIcon,
     EyeIcon,
-    EyeSlashIcon
+    EyeSlashIcon,
+    ArrowPathIcon
 } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
 
@@ -16,97 +17,71 @@ export function LoginForm() {
     const [state, action, isPending] = useActionState(loginAction, initialState)
     const [showPassword, setShowPassword] = useState(false)
 
-    // Клас для вимкнення білого фону при автозаповненні браузером
-    const autofillFix = "[&:-webkit-autofill]:[-webkit-text-fill-color:white] [&:-webkit-autofill]:[transition:background-color_9999s_ease-in-out_0s]";
-
     return (
-        <form action={action} className="space-y-6" noValidate>
-
-            <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-300 ml-1">Email</label>
+        <form action={action} className="space-y-4" noValidate>
+            <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">Email Address</label>
                 <div className="relative">
-                    <EnvelopeIcon
-                        className={clsx(
-                            "absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5",
-                            state.errors?.email ? "text-red-400" : "text-dark-muted"
-                        )}
-                    />
+                    <EnvelopeIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                         name="email"
                         type="email"
                         autoComplete="username"
                         defaultValue={state.inputs?.email}
-                        placeholder="email@example.com"
+                        placeholder="user@example.com"
                         className={clsx(
-                            "w-full bg-dark-900 border rounded-xl pl-10 pr-4 py-3 transition-all outline-none",
-                            autofillFix,
-                            state.errors?.email
-                                ? "border-red-500 focus:ring-2 focus:ring-red-500/50 text-red-100 placeholder:text-red-300/50"
-                                : "border-dark-700 text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                            "w-full bg-slate-50 border rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-colors",
+                            state.errors?.email ? "border-rose-400" : "border-slate-200"
                         )}
                     />
                 </div>
                 {state.errors?.email && (
-                    <p className="text-red-400 text-xs ml-1 font-medium">{state.errors.email[0]}</p>
+                    <p className="text-rose-600 text-xs font-medium">{state.errors.email[0]}</p>
                 )}
             </div>
 
-            <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-300 ml-1">Password</label>
+            <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">Password</label>
                 <div className="relative">
-                    <LockClosedIcon
-                        className={clsx(
-                            "absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5",
-                            state.errors?.password ? "text-red-400" : "text-dark-muted"
-                        )}
-                    />
+                    <LockClosedIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                         name="password"
                         type={showPassword ? "text" : "password"}
                         autoComplete="current-password"
                         defaultValue={state.inputs?.password}
-                        placeholder="••••••"
+                        placeholder="••••••••"
                         className={clsx(
-                            "w-full bg-dark-900 border rounded-xl pl-10 pr-12 py-3 transition-all outline-none",
-                            autofillFix,
-                            state.errors?.password
-                                ? "border-red-500 focus:ring-2 focus:ring-red-500/50 text-red-100"
-                                : "border-dark-700 text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                            "w-full bg-slate-50 border rounded-lg pl-9 pr-10 py-2 text-xs text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-colors",
+                            state.errors?.password ? "border-rose-400" : "border-slate-200"
                         )}
                     />
                     <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-muted hover:text-white transition-colors outline-none focus:outline-none"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
                     >
-                        {showPassword ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                        {showPassword ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                     </button>
                 </div>
                 {state.errors?.password && (
-                    <p className="text-red-400 text-xs ml-1 font-medium">{state.errors.password[0]}</p>
+                    <p className="text-rose-600 text-xs font-medium">{state.errors.password[0]}</p>
                 )}
             </div>
 
             {state.message && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center flex items-center justify-center gap-2">
-                    <span>⚠️</span> {state.message}
+                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs text-center">
+                    {state.message}
                 </div>
             )}
 
             <button
                 type="submit"
                 disabled={isPending}
-                className={clsx(
-                    "w-full font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 outline-none focus:outline-none",
-                    isPending
-                        ? "bg-primary/50 cursor-not-allowed text-white/70"
-                        : "bg-primary hover:bg-primary-hover text-white shadow-blue-500/25"
-                )}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-2 rounded-lg text-xs transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
-                {isPending ? 'Signing In...' : 'Sign In'}
-                {!isPending && <ArrowRightOnRectangleIcon className="w-5 h-5" />}
+                {isPending ? <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" /> : <ArrowRightOnRectangleIcon className="w-3.5 h-3.5" />}
+                {isPending ? 'Authenticating...' : 'Sign In'}
             </button>
-
         </form>
     )
 }

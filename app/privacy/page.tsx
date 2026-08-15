@@ -3,75 +3,56 @@ import { ArrowLeft, Shield } from 'lucide-react'
 
 export default function PrivacyPolicyPage() {
     return (
-        <div className="min-h-screen bg-dark-900 text-white font-sans selection:bg-primary/30 pb-20">
-            <header className="border-b border-dark-700/50 bg-dark-900/80 backdrop-blur-md sticky top-0 z-50">
-                <div className="max-w-4xl mx-auto px-6 h-16 md:h-20 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <Shield className="text-primary w-6 h-6" />
-                        <span className="text-lg font-semibold tracking-tight">Access Control System</span>
+        <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-slate-900 selection:text-white pb-20">
+            <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
+                <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                        <Shield className="text-slate-900 w-5 h-5" />
+                        <span className="text-base font-bold tracking-tight text-slate-900">Smart ACS</span>
                     </div>
                     <Link
                         href="/"
-                        className="text-sm font-medium text-dark-muted hover:text-white transition-colors flex items-center gap-2"
+                        className="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-1.5"
                     >
-                        <ArrowLeft size={16} /> Back to Home
+                        <ArrowLeft size={14} /> Back to Home
                     </Link>
                 </div>
             </header>
 
-            <main className="max-w-3xl mx-auto px-6 pt-12 md:pt-20">
-                <div className="space-y-8 text-gray-300 leading-relaxed">
+            <main className="max-w-3xl mx-auto px-6 pt-12">
+                <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm space-y-6 text-slate-700 leading-relaxed text-sm">
                     <div>
-                        <h1 className="text-3xl md:text-4xl font-extrabold text-white mb-4">Privacy Policy</h1>
-                        <p className="text-sm text-dark-muted mb-8">Last updated: May 2026</p>
-
-                        <p className="mb-4">
-                            This Privacy Policy explains how our Access Control System collects, uses, and protects your personal information. As a security platform, we take the confidentiality of your data seriously.
-                        </p>
+                        <h1 className="text-2xl font-bold text-slate-900 mb-1">Privacy Policy</h1>
+                        <p className="text-xs text-slate-400">Last updated: May 2026</p>
                     </div>
 
-                    <div className="space-y-4">
-                        <h2 className="text-2xl font-semibold text-white">1. Data We Collect</h2>
-                        <p>To provide access control services, we collect the following types of information:</p>
-                        <ul className="list-disc pl-5 space-y-2 text-dark-muted">
-                            <li>Personal details provided during registration (Name, Email Address, Job Title).</li>
-                            <li>Authentication credentials (securely hashed passwords).</li>
-                            <li>Hardware identifiers (RFID Card UID assigned to you).</li>
-                            <li>System usage data, including timestamps of when and where you access specific doors or zones.</li>
+                    <p>
+                        This Privacy Policy explains how our Access Control System collects, uses, and protects your personal information and physical telemetry data.
+                    </p>
+
+                    <div className="space-y-2">
+                        <h2 className="text-base font-semibold text-slate-900">1. Data We Collect</h2>
+                        <ul className="list-disc pl-5 space-y-1 text-slate-600 text-xs">
+                            <li>Personal information (Name, Email Address, Job Title).</li>
+                            <li>Authentication credentials (securely hashed with bcryptjs).</li>
+                            <li>Hardware identifiers (assigned RFID Card UID).</li>
+                            <li>Timestamped telemetry logs of physical entries, exits, and intrusion events.</li>
                         </ul>
                     </div>
 
-                    <div className="space-y-4">
-                        <h2 className="text-2xl font-semibold text-white">2. How We Use Your Data</h2>
-                        <p>The collected data is used exclusively for the core functions of the system:</p>
-                        <ul className="list-disc pl-5 space-y-2 text-dark-muted">
-                            <li>To verify your identity and grant or deny access to physical locations.</li>
-                            <li>To maintain an accurate log of entry and exit events for administrative and security audits.</li>
-                            <li>To prevent unauthorized access and enforce anti-passback rules.</li>
+                    <div className="space-y-2">
+                        <h2 className="text-base font-semibold text-slate-900">2. How We Use Data</h2>
+                        <ul className="list-disc pl-5 space-y-1 text-slate-600 text-xs">
+                            <li>Validate entry permissions against door access whitelists.</li>
+                            <li>Enforce Anti-Passback (APB) sequence validation.</li>
+                            <li>Maintain verifiable security audit trails and work hours analytics.</li>
                         </ul>
                     </div>
 
-                    <div className="space-y-4">
-                        <h2 className="text-2xl font-semibold text-white">3. Data Security</h2>
-                        <p>
-                            We implement strict security measures to protect your data. All communication between hardware terminals and the central server is encrypted. Passwords are never stored in plain text, and your physical access history is accessible only to authorized administrators.
-                        </p>
-                    </div>
-
-                    <div className="space-y-4">
-                        <h2 className="text-2xl font-semibold text-white">4. Data Retention and Immutable Logs</h2>
-                        <p>
-                            To ensure the absolute integrity of the security audit trail, manual deletion of access logs through the user interface is intentionally restricted by design. This guarantees a tamper-proof history of facility access events.
-                        </p>
-                        <p>
-                            For long-term storage and database optimization in production environments, system administrators are advised to configure server-level Data Retention Policies (such as cron jobs or database partitioning) to automatically archive older logs according to their organization's specific compliance requirements.
-                        </p>
-                    </div>
-
-                    <div className="space-y-4 p-6 bg-blue-500/10 border border-blue-500/20 rounded-2xl mt-8">
-                        <h2 className="text-xl font-semibold text-blue-400">Project Status & Reliability</h2>
-                        <p className="text-sm">
-                            This system was developed as a Bachelor Diploma Project at the National Technical University of Ukraine "Igor Sikorsky Kyiv Polytechnic Institute". It has undergone rigorous testing and demonstrates high reliability, stability, and strict data protection standards. However, as with any security solution, we strongly advise conducting additional independent audits before integrating it into a live enterprise environment.
+                    <div className="space-y-2">
+                        <h2 className="text-base font-semibold text-slate-900">3. Immutable Audit Trails</h2>
+                        <p className="text-xs text-slate-600">
+                            To ensure security audit integrity, access logs cannot be tampered with or deleted through the UI. Server-side log retention and archival policies should be configured by system administrators.
                         </p>
                     </div>
                 </div>

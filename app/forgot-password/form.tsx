@@ -27,9 +27,9 @@ export function ForgotPasswordForm() {
     }
 
     return (
-        <form onSubmit={onSubmit} className="space-y-5">
-            <div>
-                <label htmlFor="email" className="block text-sm font-medium text-dark-muted mb-1.5">
+        <form onSubmit={onSubmit} className="space-y-4">
+            <div className="space-y-1">
+                <label htmlFor="email" className="text-xs font-semibold text-slate-700">
                     Email Address
                 </label>
                 <input
@@ -40,30 +40,30 @@ export function ForgotPasswordForm() {
                     disabled={isPending}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-dark-900 border border-dark-700 rounded-lg px-4 py-2.5 text-white placeholder-dark-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors disabled:opacity-50"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-slate-900 transition-colors disabled:opacity-50"
                     placeholder="admin@example.com"
                 />
             </div>
 
             {error && (
-                <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3">
-                    <p className="text-sm text-red-400">{error}</p>
+                <div className="rounded-lg border border-rose-200 bg-rose-50 p-2.5">
+                    <p className="text-xs text-rose-700 font-medium">{error}</p>
                 </div>
             )}
 
             {success && (
-                <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3">
-                    <p className="text-sm text-emerald-400">{success}</p>
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
+                    <p className="text-xs text-emerald-700 font-medium">{success}</p>
                 </div>
             )}
 
             <button
                 type="submit"
                 disabled={isPending}
-                className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50 flex justify-center items-center h-11"
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-2 rounded-lg text-xs transition-colors shadow-sm disabled:opacity-50 flex justify-center items-center h-9"
             >
                 {isPending ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                     "Send Reset Link"
                 )}

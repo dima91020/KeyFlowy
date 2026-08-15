@@ -4,35 +4,31 @@ import { RegisterForm } from './form'
 
 export default async function RegisterPage() {
     return (
-        <div className="min-h-screen bg-dark-900 flex items-center justify-center p-4">
-            <div className="absolute top-0 left-0 w-full h-1/2 bg-blue-600/10 blur-[100px] pointer-events-none" />
-
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
             <div className="w-full max-w-md relative z-10">
-
                 <Link
                     href="/"
-                    className="inline-flex items-center gap-1.5 text-sm font-medium text-dark-muted hover:text-white mb-6 transition-colors w-fit"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 mb-6 transition-colors"
                 >
-                    <ChevronLeftIcon className="w-4 h-4" />
+                    <ChevronLeftIcon className="w-3.5 h-3.5" />
                     <span>Back to Home</span>
                 </Link>
 
-                <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20 mx-auto mb-6">
-                        <ShieldCheckIcon className="text-white w-8 h-8" />
+                <div className="text-center mb-6">
+                    <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center mx-auto mb-4 text-white shadow-sm">
+                        <ShieldCheckIcon className="w-6 h-6" />
                     </div>
-                    <h1 className="text-3xl font-semibold text-white mb-2">Register Company</h1>
-                    <p className="text-dark-muted">Create an administrator account for your organization.</p>
+                    <h1 className="text-xl font-bold text-slate-900">Register Organization</h1>
+                    <p className="text-xs text-slate-500 mt-1">Create an administrator account to manage your facilities.</p>
                 </div>
 
-                <div className="bg-dark-800 border border-dark-700 rounded-2xl p-8 shadow-2xl">
+                <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
                     <RegisterForm />
                 </div>
 
-                <p className="text-center text-dark-muted text-sm mt-6">
-                    Already have an account? <Link href="/login" className="text-primary hover:underline">Log in here</Link>
+                <p className="text-center text-xs text-slate-500 mt-4">
+                    Already registered? <Link href="/login" className="text-slate-900 font-semibold hover:underline">Log in here</Link>
                 </p>
-
             </div>
         </div>
     )

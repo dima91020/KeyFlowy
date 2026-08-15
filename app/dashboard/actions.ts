@@ -2,7 +2,8 @@
 
 import { prisma } from '@/app/lib/prisma'
 import { Prisma } from '@prisma/client'
-import {verifySession} from "@/app/lib/session";
+import { verifySession } from "@/app/lib/session"
+import { calculateDayWorkHours } from "@/app/lib/access-control"
 
 export type LogWithDetails = Prisma.LogGetPayload<{
     include: {
@@ -15,7 +16,6 @@ export async function getCurrentUserId() {
     return await verifySession()
 }
 
-// 1. Оновлено: Приймає adminId
 export async function getRecentLogsAction(adminId: string) {
     const now = new Date()
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
@@ -27,7 +27,6 @@ export async function getRecentLogsAction(adminId: string) {
                 gte: startOfDay,
                 lte: endOfDay,
             },
-            // ФІЛЬТР: логи тільки з пристроїв цього адміна
             device: {
                 adminId: adminId
             }
@@ -51,7 +50,6 @@ export type DailyStat = {
     workHours: number;
 };
 
-// 2. Оновлено: Приймає adminId
 export async function getWeeklyStatsAction(adminId: string) {
     const now = new Date();
     const sevenDaysAgo = new Date();
@@ -65,7 +63,6 @@ export async function getWeeklyStatsAction(adminId: string) {
             },
             accessGranted: true,
             eventType: { not: 'INTRUSION' },
-            // ФІЛЬТР: логи тільки з пристроїв цього адміна
             device: {
                 adminId: adminId
             }
@@ -102,9 +99,6 @@ export async function getWeeklyStatsAction(adminId: string) {
     return days;
 }
 
-// Функція getUserProfileStatsAction не потребує adminId,
-// бо вона приймає конкретний userId (запит іде для конкретного працівника).
-// Але для безпеки можна додати перевірку, чи належить цей юзер адміну (опціонально).
 export async function getUserProfileStatsAction(userId: string) {
     const user = await prisma.user.findUnique({
         where: { id: userId }
@@ -160,17 +154,7 @@ export async function getUserProfileStatsAction(userId: string) {
 
         day.entries = dayLogs.filter(l => l.direction === 'ENTRY').length;
         day.exits = dayLogs.filter(l => l.direction === 'EXIT').length;
-
-        if (dayLogs.length > 0) {
-            const firstEntry = dayLogs.find(l => l.direction === 'ENTRY');
-            const lastExit = [...dayLogs].reverse().find(l => l.direction === 'EXIT');
-
-            if (firstEntry && lastExit && lastExit.timestamp > firstEntry.timestamp) {
-                const diffMs = lastExit.timestamp.getTime() - firstEntry.timestamp.getTime();
-                const hours = diffMs / (1000 * 60 * 60);
-                day.workHours = Number(hours.toFixed(1));
-            }
-        }
+        day.workHours = calculateDayWorkHours(dayLogs);
     });
 
     const daysWithHours = weeklyStats.filter(d => d.workHours > 0);
@@ -191,7 +175,6 @@ export type HourlyStat = {
     count: number;
 };
 
-// 3. Оновлено: Приймає adminId
 export async function getPeakHoursAction(adminId: string) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -201,7 +184,6 @@ export async function getPeakHoursAction(adminId: string) {
             timestamp: { gte: thirtyDaysAgo },
             accessGranted: true,
             eventType: { not: 'INTRUSION' },
-            // ФІЛЬТР
             device: {
                 adminId: adminId
             }
@@ -228,7 +210,6 @@ export type SecurityStat = {
     color: string;
 };
 
-// 4. Оновлено: Приймає adminId
 export async function getSecurityStatsAction(adminId: string) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -236,7 +217,6 @@ export async function getSecurityStatsAction(adminId: string) {
     const logs = await prisma.log.findMany({
         where: {
             timestamp: { gte: thirtyDaysAgo },
-            // ФІЛЬТР
             device: {
                 adminId: adminId
             }

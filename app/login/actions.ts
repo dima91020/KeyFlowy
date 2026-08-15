@@ -2,7 +2,7 @@
 
 import { z } from 'zod'
 import { prisma } from '@/app/lib/prisma'
-import { compare } from 'bcrypt'
+import { compare } from 'bcryptjs'
 import { redirect } from 'next/navigation'
 import { createSession, deleteSession } from '@/app/lib/session'
 
@@ -19,7 +19,7 @@ export type LoginState = {
     message?: string | null;
     inputs?: {
         email?: string;
-        password?: string; // Додано для збереження введеного пароля
+        password?: string;
     };
 }
 
@@ -46,10 +46,9 @@ export async function loginAction(prevState: LoginState, formData: FormData): Pr
             where: { email }
         })
 
-        // Розділяємо перевірки для точного вказування помилки
         if (!user || !user.password) {
             return {
-                errors: { email: ["User with this email not found."] },
+                message: "Invalid email or password.",
                 inputs: rawData
             }
         }
@@ -58,15 +57,21 @@ export async function loginAction(prevState: LoginState, formData: FormData): Pr
 
         if (!isPasswordValid) {
             return {
-                errors: { password: ["Incorrect password."] },
+                message: "Invalid email or password.",
+                inputs: rawData
+            }
+        }
+
+        if (!user.isActive) {
+            return {
+                message: "Account is disabled. Please contact administrator.",
                 inputs: rawData
             }
         }
 
         await createSession(user.id)
 
-    } catch (error) {
-        console.error("Login Error:", error)
+    } catch {
         return {
             message: "Something went wrong. Please try again.",
             inputs: rawData
