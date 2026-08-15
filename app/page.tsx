@@ -39,7 +39,13 @@ export default async function LandingPage() {
                         <span className="text-base font-bold tracking-tight text-slate-900">KeyFlowy</span>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-6">
+                        <nav className="hidden md:flex gap-6 text-xs font-medium text-slate-600">
+                            <Link href="#components" className="hover:text-slate-900 transition-colors">Architecture</Link>
+                            <Link href="#how-it-works" className="hover:text-slate-900 transition-colors">Workflow</Link>
+                            <Link href="#features" className="hover:text-slate-900 transition-colors">Features</Link>
+                        </nav>
+
                         {isLoggedIn ? (
                             <Link
                                 href="/dashboard"

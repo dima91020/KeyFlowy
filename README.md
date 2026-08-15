@@ -26,49 +26,17 @@ An enterprise-grade, end-to-end **Physical Access Control System (PACS)** and Io
 
 ```mermaid
 flowchart TB
-    subgraph Hardware["IoT Hardware Layer (ESP32)"]
-        NFC_IN["PN532 Reader (Entry)\nI2C Bus 0 (Wire)"]
-        NFC_OUT["PN532 Reader (Exit)\nI2C Bus 1 (Wire1)"]
-        RELAY["Relay Actuator\n(NO / NC Configurable)"]
-        SENSOR["Magnetic Door Sensor\n(Reed Switch)"]
-        BUZZER["Buzzer & Status LEDs"]
-    end
+    Hardware["ESP32 Hardware Controller\n(Dual PN532 NFC Readers + Relay Lock + Reed Sensor)"]
+    Simulator["CLI Hardware Simulator\n(Virtual Testbed Node)"]
+    Gateway["WebSocket Gateway & APB Engine\n(:8080 Real-Time Server)"]
+    Database[("PostgreSQL Database + Prisma ORM\n(Users, Credentials, Device Fleet & Access Logs)")]
+    WebApp["Next.js 16 Web Application\n(Admin Management & Employee Self-Service Portal)"]
 
-    subgraph Gateway["WebSocket Gateway (:8080)"]
-        WS_SRV["Connection Manager\n& Watchdog Ping"]
-        APB_ENG["Anti-Passback &\nAccess Decision Engine"]
-        LOGGER["Structured Audit Logger"]
-    end
-
-    subgraph WebApp["Next.js 16 Web Application (:3000)"]
-        DASH["Admin Dashboard\n& Employee Portal"]
-        ACTIONS["Server Actions\n& Zod Validation"]
-        API["HTTP Hardware Config API"]
-    end
-
-    subgraph Database["PostgreSQL + Prisma ORM"]
-        USERS["Users & Credentials"]
-        DEVICES["Device Fleet & Keys"]
-        LOGS["Access Logs & Metrics\n(Indexed)"]
-    end
-
-    subgraph Simulator["Interactive CLI Simulator"]
-        SIM_CLI["simulator/cli.ts"]
-    end
-
-    NFC_IN -->|ACCESS_CHECK| WS_SRV
-    NFC_OUT -->|ACCESS_CHECK| WS_SRV
-    SENSOR -->|PASSAGE_CONFIRMED / DOOR_EVENT| WS_SRV
-    WS_SRV -->|ACCESS_RESPONSE / COMMAND| RELAY
-    WS_SRV -->|Tone / LED Signal| BUZZER
-
-    SIM_CLI <-->|Simulated Protocol| WS_SRV
-
-    WS_SRV <--> APB_ENG
-    APB_ENG <--> Database
-    WS_SRV --- LOGGER
-    WebApp <--> Database
-    WS_SRV -.->|Broadcast Status| WebApp
+    Hardware <-->|"WebSocket Protocol (ACCESS_CHECK / COMMAND)"| Gateway
+    Simulator <-->|"Simulated WebSocket Traffic"| Gateway
+    Gateway <-->|"Access Decision & Audit Logging"| Database
+    WebApp <-->|"Server Actions & Real-Time Sync"| Database
+    Gateway -.->|"Live Telemetry Broadcast"| WebApp
 ```
 
 ---
