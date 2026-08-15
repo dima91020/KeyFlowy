@@ -14,17 +14,16 @@ export function LiveListener() {
             try {
                 const data = JSON.parse(event.data)
 
-                // Коли отримуємо подію успішного проходу, оновлюємо дані сторінки
                 if (data.type === 'EVENT') {
                     router.refresh()
                 }
-            } catch (e) {
-                console.error('WS Error', e)
+            } catch {
+                // Ignore malformed WS frames
             }
         }
 
         return () => ws.close()
     }, [router])
 
-    return null // Цей компонент нічого не малює на екрані
+    return null
 }

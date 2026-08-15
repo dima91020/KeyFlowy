@@ -1,15 +1,11 @@
 import {
     TrashIcon,
     UserIcon,
-    ShieldCheckIcon,
-    NoSymbolIcon,
-    MapPinIcon,
-    EyeIcon,
     PencilSquareIcon,
-    ClockIcon
 } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { deleteUserAction } from '@/app/dashboard/users/actions'
+import { Badge } from '@/app/ui/badge'
 
 export function UserCard({ user, currentUserId }: { user: any; currentUserId: string }) {
     const isCurrentUser = user.id === currentUserId;
@@ -32,110 +28,94 @@ export function UserCard({ user, currentUserId }: { user: any; currentUserId: st
         else timeLeftString = `${mins}m`;
     }
 
-    const cardStyles = isActuallyActive
-        ? "bg-dark-800 border-dark-700 hover:border-dark-600"
-        : "bg-red-900/10 border-red-900/30 opacity-80";
-
-    const lastLocation = user.logs?.[0]?.device?.name;
-
     return (
-        <div className={`border rounded-2xl p-5 transition-all group relative flex flex-col ${cardStyles}`}>
-            <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border overflow-hidden shrink-0 ${
-                        isActuallyActive
-                            ? "bg-dark-700 border-dark-600"
-                            : "bg-dark-800 border-red-900/30 grayscale opacity-60"
-                    }`}>
-                        {user.image ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img src={user.image} alt={user.name || 'User'} className="w-full h-full object-cover" />
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:border-slate-300 transition-colors flex flex-col justify-between">
+            <div>
+                <div className="flex items-start justify-between mb-3.5">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-semibold text-xs overflow-hidden shrink-0">
+                            {user.image ? (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img src={user.image} alt={user.name || 'User'} className="w-full h-full object-cover" />
+                            ) : (
+                                <UserIcon className="w-5 h-5 text-slate-400" />
+                            )}
+                        </div>
+
+                        <div>
+                            <h3 className="font-semibold text-slate-900 text-sm leading-snug flex items-center gap-1.5">
+                                {user.name || 'Unnamed'}
+                                {isCurrentUser && (
+                                    <span className="text-[10px] text-slate-400 font-normal">(You)</span>
+                                )}
+                            </h3>
+                            <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
+                                {user.jobTitle || (user.role === 'GUEST' ? 'Guest Visitor' : 'Staff Member')}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                        {user.role === 'ADMIN' && (
+                            <Badge size="sm" variant="info">
+                                Admin
+                            </Badge>
+                        )}
+
+                        {user.role === 'GUEST' && (
+                            <Badge size="sm" variant={isExpired ? 'danger' : 'warning'} dot>
+                                {isExpired ? 'Expired' : `Guest (${timeLeftString})`}
+                            </Badge>
+                        )}
+
+                        {!user.isActive ? (
+                            <Badge size="sm" variant="danger" dot>
+                                Blocked
+                            </Badge>
                         ) : (
-                            <UserIcon className="w-6 h-6 text-dark-muted" />
+                            <Badge size="sm" variant="success" dot>
+                                Active
+                            </Badge>
                         )}
                     </div>
-
-                    <div>
-                        <h3 className={`font-bold text-lg leading-tight flex flex-wrap items-center gap-2 mb-1 ${!isActuallyActive ? "text-red-200" : "text-white"}`}>
-                            {user.name || 'Unnamed'}
-                            {isCurrentUser && <span className="text-dark-muted text-xs font-normal border border-dark-700 px-1.5 py-0.5 rounded">(You)</span>}
-
-                            {isActuallyActive && (
-                                user.isInside ? (
-                                    <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wider">
-                                        <MapPinIcon className="w-3 h-3" /> {lastLocation ? lastLocation : 'Всередині'}
-                                    </span>
-                                ) : (
-                                    <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-dark-700 text-dark-400 border border-dark-600 uppercase tracking-wider">
-                                        <MapPinIcon className="w-3 h-3 opacity-50" /> Ззовні
-                                    </span>
-                                )
-                            )}
-                        </h3>
-                        <p className="text-sm text-dark-muted line-clamp-1">
-                            {user.jobTitle || 'No Job Title'}
-                        </p>
-                    </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-1 shrink-0">
-                    {user.role === 'ADMIN' && (
-                        <span className="px-2 py-1 rounded-lg bg-purple-500/10 text-purple-400 text-xs font-bold border border-purple-500/20 flex items-center gap-1">
-                            <ShieldCheckIcon className="w-3 h-3" /> ADMIN
-                        </span>
+                <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 space-y-1.5 text-xs mb-4">
+                    <div className="flex justify-between">
+                        <span className="text-slate-500">Badge UID:</span>
+                        <span className="font-mono text-slate-800 font-medium">{user.cardUid || 'None'}</span>
+                    </div>
+
+                    {user.role !== 'GUEST' && user.email && (
+                        <div className="flex justify-between">
+                            <span className="text-slate-500">Email:</span>
+                            <span className="text-slate-700 truncate max-w-[170px]">{user.email}</span>
+                        </div>
                     )}
 
-                    {user.role === 'GUEST' && (
-                        <span className={`px-2 py-1 rounded-lg text-xs font-bold border flex items-center gap-1 ${
-                            isExpired
-                                ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                                : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                        }`}>
-                            <ClockIcon className="w-3 h-3" />
-                            {isExpired ? 'EXPIRED' : `GUEST (${timeLeftString})`}
+                    <div className="flex justify-between pt-1 border-t border-slate-200/60">
+                        <span className="text-slate-500">Location:</span>
+                        <span className="text-slate-800 font-medium">
+                            {isActuallyActive ? (user.isInside ? 'Inside Facility' : 'Outside') : 'Access Denied'}
                         </span>
-                    )}
-
-                    {!user.isActive && (
-                        <span className="px-2 py-1 rounded-lg bg-red-500 text-white text-[10px] font-black tracking-wider uppercase shadow-lg shadow-red-900/50 flex items-center gap-1">
-                            <NoSymbolIcon className="w-3 h-3" /> BLOCKED
-                        </span>
-                    )}
+                    </div>
                 </div>
             </div>
 
-            <div className="space-y-2 bg-dark-900/50 p-3 rounded-xl border border-dark-700/50 mb-4 flex-1">
-                <div className="flex justify-between text-sm">
-                    <span className="text-dark-muted">Card UID:</span>
-                    <span className={`font-mono tracking-wider ${!isActuallyActive ? "text-red-300/50 line-through" : "text-white"}`}>
-                        {user.cardUid || '-'}
-                    </span>
-                </div>
-                {user.role !== 'GUEST' && (
-                    <div className="flex justify-between text-sm">
-                        <span className="text-dark-muted">Email:</span>
-                        <span className="text-white truncate max-w-[150px]" title={user.email || ''}>
-                            {user.email || '-'}
-                        </span>
-                    </div>
-                )}
-            </div>
-
-            <div className="flex gap-2 mt-auto">
+            <div className="flex items-center gap-2 pt-1">
                 <Link
                     href={`/dashboard/users/${user.id}`}
-                    className="flex-1 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 py-2 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 py-1.5 px-3 rounded-lg text-xs font-medium transition-colors text-center"
                 >
-                    <EyeIcon className="w-4 h-4" />
-                    Stats
+                    View Stats
                 </Link>
 
                 <Link
                     href={`/dashboard/users/${user.id}/edit`}
-                    className="bg-gray-500/10 hover:bg-gray-500/20 text-dark-muted hover:text-white p-2 rounded-xl transition-colors border border-gray-500/10 h-full w-10 flex items-center justify-center"
+                    className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors"
                     title="Edit User"
                 >
-                    <PencilSquareIcon className="w-5 h-5" />
+                    <PencilSquareIcon className="w-4 h-4" />
                 </Link>
 
                 {!isCurrentUser && (
@@ -143,10 +123,10 @@ export function UserCard({ user, currentUserId }: { user: any; currentUserId: st
                         <input type="hidden" name="id" value={user.id} />
                         <button
                             type="submit"
-                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 p-2 rounded-xl transition-colors border border-red-500/10 h-full w-10 flex items-center justify-center"
+                            className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                             title="Delete User"
                         >
-                            <TrashIcon className="w-5 h-5" />
+                            <TrashIcon className="w-4 h-4" />
                         </button>
                     </form>
                 )}

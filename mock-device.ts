@@ -1,49 +1,43 @@
 import WebSocket from 'ws';
 
-// Налаштування
-const WS_URL = 'ws://localhost:8080';
-const MY_MAC = 'TEST-DEVICE-01'; // Наша тестова MAC-адреса
+const WS_URL = process.env.WS_URL || 'ws://localhost:8080';
+const MY_MAC = 'TEST-DEVICE-01';
 
 const ws = new WebSocket(WS_URL);
 
 ws.on('open', () => {
-    console.log(`🔌 Connected to server as ${MY_MAC}`);
+    console.log(`[Mock Device] Connected to gateway as ${MY_MAC}`);
 
-    // 1. РЕЄСТРАЦІЯ
     const registerMsg = {
         type: 'REGISTER',
         mac: MY_MAC
     };
     ws.send(JSON.stringify(registerMsg));
-    console.log('📤 Sent REGISTER command');
+    console.log('[Mock Device] Dispatched REGISTER handshake');
 });
 
 ws.on('message', (data) => {
     const command = data.toString();
-    console.log(`📩 Received command: ${command}`);
+    console.log(`[Mock Device] Received command: ${command}`);
 
-    // 2. ОБРОБКА КОМАНДИ "START_SCAN"
     if (command === 'START_SCAN') {
-        console.log('👀 Scanning started... (Waiting 3s)');
+        console.log('[Mock Device] Scanning started (3s timer)...');
 
         setTimeout(() => {
             const fakeUid = generateRandomUid();
-            console.log(`✅ Card Detected! UID: ${fakeUid}`);
+            console.log(`[Mock Device] Card detected: ${fakeUid}`);
 
-            // 3. ВІДПРАВКА ПОДІЇ НА СЕРВЕР
             const eventMsg = {
                 type: 'EVENT',
                 mac: MY_MAC,
-                payload: `UID:${fakeUid}` // Формат, який чекає фронтенд
+                payload: `UID:${fakeUid}`
             };
             ws.send(JSON.stringify(eventMsg));
-            console.log('📤 Sent UID to server');
-
+            console.log('[Mock Device] Sent scanned UID to gateway');
         }, 3000);
     }
 });
 
-// Допоміжна функція для генерації випадкового UID
 function generateRandomUid() {
     const bytes = Array.from({ length: 4 }, () =>
         Math.floor(Math.random() * 255).toString(16).toUpperCase().padStart(2, '0')

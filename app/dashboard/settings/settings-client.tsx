@@ -3,13 +3,11 @@
 import { useActionState, useState } from 'react'
 import { changePasswordAction, updateEmailAction } from './actions'
 import {
-    KeyIcon,
-    LockClosedIcon,
     CheckCircleIcon,
     EyeIcon,
     EyeSlashIcon,
     EnvelopeIcon,
-    UserIcon,
+    LockClosedIcon,
     ArrowDownTrayIcon,
     ArrowPathIcon
 } from '@heroicons/react/24/outline'
@@ -22,134 +20,121 @@ export function SettingsClient({ user }: { user: { email: string, role: string }
     const [showCurrentPassword, setShowCurrentPassword] = useState(false)
     const [showNewPassword, setShowNewPassword] = useState(false)
 
-    // Клас для вимкнення білого фону при автозаповненні браузером
-    const autofillFix = "[&:-webkit-autofill]:[-webkit-text-fill-color:white] [&:-webkit-autofill]:[transition:background-color_9999s_ease-in-out_0s]";
-
     return (
         <div className="space-y-6">
-
-            {/* Форма зміни пошти відображається ТІЛЬКИ для адміна */}
+            {/* Email Address Update for Admin */}
             {user.role === 'ADMIN' && (
-                <div className="bg-dark-800 border border-dark-700 rounded-3xl p-8">
-                    <h2 className="text-xl font-bold flex items-center gap-2 mb-6">
-                        <UserIcon className="text-primary w-5 h-5" /> Login Details
+                <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                    <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4">
+                        Account Email
                     </h2>
 
-                    <form action={emailAction} className="space-y-5">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-300 ml-1">Email Address (Login)</label>
+                    <form action={emailAction} className="space-y-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-700">Email Address (Login)</label>
                             <div className="relative">
-                                {/* Іконка відцентрована по вертикалі */}
-                                <EnvelopeIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted w-5 h-5" />
+                                <EnvelopeIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                                 <input
                                     type="email"
                                     name="email"
                                     defaultValue={user.email}
-                                    className={`w-full bg-dark-900 border border-dark-700 rounded-xl py-3 pl-10 pr-4 text-white outline-none transition-colors focus:border-primary ${autofillFix}`}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 pl-9 pr-3 text-xs text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-colors"
                                 />
                             </div>
                         </div>
 
                         {emailState.message && (
-                            <div className={`p-4 rounded-xl text-sm font-medium flex items-center gap-2 ${
-                                emailState.success ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            <div className={`p-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border ${
+                                emailState.success ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
                             }`}>
-                                {emailState.success ? <CheckCircleIcon className="w-5 h-5" /> : null}
+                                {emailState.success && <CheckCircleIcon className="w-4 h-4 text-emerald-600" />}
                                 {emailState.message}
                             </div>
                         )}
 
-                        <div className="pt-2">
-                            {/* Змінили на w-full для розтягування */}
-                            <button
-                                type="submit"
-                                disabled={isEmailPending}
-                                className="w-full bg-primary hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                            >
-                                {isEmailPending ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <ArrowDownTrayIcon className="w-5 h-5" />}
-                                Update Login
-                            </button>
-                        </div>
+                        <button
+                            type="submit"
+                            disabled={isEmailPending}
+                            className="w-full bg-slate-900 hover:bg-slate-800 text-white py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                        >
+                            {isEmailPending ? <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" /> : <ArrowDownTrayIcon className="w-3.5 h-3.5" />}
+                            Update Email
+                        </button>
                     </form>
                 </div>
             )}
 
-            {/* Форма зміни пароля (для всіх) */}
-            <div className="bg-dark-800 border border-dark-700 rounded-3xl p-8">
-                <h2 className="text-xl font-bold flex items-center gap-2 mb-6">
-                    <KeyIcon className="text-primary w-5 h-5" /> Change Password
+            {/* Change Password Form */}
+            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4">
+                    Security & Password
                 </h2>
 
-                <form action={passAction} className="space-y-5">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-300 ml-1">Current Password</label>
+                <form action={passAction} className="space-y-4">
+                    <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-700">Current Password</label>
                         <div className="relative">
-                            {/* Іконка замка відцентрована */}
-                            <LockClosedIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted w-5 h-5" />
+                            <LockClosedIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                             <input
                                 type={showCurrentPassword ? "text" : "password"}
                                 name="currentPassword"
                                 defaultValue={passState.inputs?.currentPassword}
-                                className={`w-full bg-dark-900 border rounded-xl py-3 pl-10 pr-12 text-white outline-none transition-colors ${autofillFix} ${
-                                    passState.errors?.currentPassword ? 'border-red-500' : 'border-dark-700 focus:border-primary'
+                                className={`w-full bg-slate-50 border rounded-lg py-2 pl-9 pr-10 text-xs text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-colors ${
+                                    passState.errors?.currentPassword ? 'border-rose-400' : 'border-slate-200'
                                 }`}
                             />
-                            {/* Іконка ока відцентрована */}
                             <button
                                 type="button"
                                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-muted hover:text-white transition-colors"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
                             >
-                                {showCurrentPassword ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                                {showCurrentPassword ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                             </button>
                         </div>
                         {passState.errors?.currentPassword && (
-                            <p className="text-xs text-red-400 ml-1">{passState.errors.currentPassword}</p>
+                            <p className="text-xs text-rose-600 font-medium">{passState.errors.currentPassword}</p>
                         )}
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-300 ml-1">New Password</label>
+                    <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-700">New Password</label>
                         <div className="relative">
-                            {/* Іконки відцентровані */}
-                            <LockClosedIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted w-5 h-5" />
+                            <LockClosedIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                             <input
                                 type={showNewPassword ? "text" : "password"}
                                 name="newPassword"
                                 defaultValue={passState.inputs?.newPassword}
-                                className={`w-full bg-dark-900 border rounded-xl py-3 pl-10 pr-12 text-white outline-none transition-colors ${autofillFix} ${
-                                    passState.errors?.newPassword ? 'border-red-500' : 'border-dark-700 focus:border-primary'
+                                className={`w-full bg-slate-50 border rounded-lg py-2 pl-9 pr-10 text-xs text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-colors ${
+                                    passState.errors?.newPassword ? 'border-rose-400' : 'border-slate-200'
                                 }`}
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowNewPassword(!showNewPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-muted hover:text-white transition-colors"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
                             >
-                                {showNewPassword ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                                {showNewPassword ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                             </button>
                         </div>
                         {passState.errors?.newPassword && (
-                            <p className="text-xs text-red-400 ml-1">{passState.errors.newPassword}</p>
+                            <p className="text-xs text-rose-600 font-medium">{passState.errors.newPassword}</p>
                         )}
                     </div>
 
                     {passState.message && (
-                        <div className={`p-4 rounded-xl text-sm font-medium flex items-center gap-2 ${
-                            passState.success ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                        <div className={`p-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border ${
+                            passState.success ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
                         }`}>
-                            {passState.success ? <CheckCircleIcon className="w-5 h-5" /> : null}
+                            {passState.success && <CheckCircleIcon className="w-4 h-4 text-emerald-600" />}
                             {passState.message}
                         </div>
                     )}
 
-                    <div className="pt-4 flex gap-3">
-                        {/* Показуємо Cancel ТІЛЬКИ для звичайного юзера */}
+                    <div className="pt-2 flex gap-3">
                         {user.role !== 'ADMIN' && (
                             <Link
                                 href="/dashboard"
-                                // Замінили border-dark-600 на border-dark-700, щоб рамка була темною і не світилася білим
-                                className="px-6 py-3 rounded-xl bg-dark-800 hover:bg-dark-700 text-dark-muted hover:text-white font-medium transition-colors border border-dark-700 flex items-center justify-center outline-none focus:outline-none focus:ring-0"
+                                className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors flex items-center justify-center"
                             >
                                 Cancel
                             </Link>
@@ -157,9 +142,9 @@ export function SettingsClient({ user }: { user: { email: string, role: string }
                         <button
                             type="submit"
                             disabled={isPassPending}
-                            className="flex-1 bg-primary hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 outline-none focus:outline-none"
+                            className="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
                         >
-                            {isPassPending ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <ArrowDownTrayIcon className="w-5 h-5" />}
+                            {isPassPending ? <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" /> : <ArrowDownTrayIcon className="w-3.5 h-3.5" />}
                             Update Password
                         </button>
                     </div>

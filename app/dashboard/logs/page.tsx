@@ -1,6 +1,6 @@
 import { prisma } from '@/app/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { MagnifyingGlassIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import { verifySession } from '@/app/lib/session'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -30,7 +30,6 @@ export default async function LogsPage({searchParams}: {
     const whereCondition: Prisma.LogWhereInput = {}
     const andConditions: Prisma.LogWhereInput[] = []
 
-    // SaaS Логіка: Адмін бачить логи своїх девайсів, юзер тільки свої
     if (user.role === 'ADMIN') {
         andConditions.push({ device: { adminId: user.id } })
     } else {
@@ -84,34 +83,40 @@ export default async function LogsPage({searchParams}: {
     }
 
     return (
-        <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
+        <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
             <LiveListener />
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
                 <div>
-                    <h1 className="text-3xl font-bold text-white">Access Logs</h1>
-                    <p className="text-dark-muted mt-1">Full history of access events, intrusions, and movements.</p>
+                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Access Logs</h1>
+                    <p className="text-slate-500 text-sm mt-0.5">Real-time audit log of passages, alarms, and credentials.</p>
                 </div>
 
-                <ExportButton />
+                <div className="flex items-center gap-3">
+                    <span className="text-xs font-medium text-slate-500 bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm hidden sm:inline-block">
+                        Total: <strong className="text-slate-900">{totalLogs}</strong>
+                    </span>
+                    <ExportButton />
+                </div>
             </div>
 
-            <form method="GET" className="bg-dark-800/50 border border-dark-700/50 rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-end">
-                <div className="flex-1 w-full space-y-1.5">
-                    <label className="text-xs font-medium text-dark-muted ml-1">Search</label>
-                    <div className="relative h-[46px]">
-                        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted w-5 h-5" />
+            {/* Filter Bar */}
+            <form method="GET" className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col md:flex-row gap-3 items-end shadow-sm">
+                <div className="flex-1 w-full space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Search</label>
+                    <div className="relative h-[38px]">
+                        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                         <input
                             name="query"
                             defaultValue={query}
-                            placeholder="Search by name or card UID..."
-                            className="w-full h-full bg-dark-900 border border-dark-700 rounded-xl pl-10 pr-4 outline-none focus:border-primary text-sm transition-colors"
+                            placeholder="Filter by name or card UID..."
+                            className="w-full h-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 text-xs text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-colors"
                         />
                     </div>
                 </div>
 
-                <div className="w-full md:w-40 space-y-1.5">
-                    <label className="text-xs font-medium text-dark-muted ml-1">Status</label>
+                <div className="w-full md:w-36 space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Status</label>
                     <CustomSelect
                         name="status"
                         defaultValue={status}
@@ -124,8 +129,8 @@ export default async function LogsPage({searchParams}: {
                     />
                 </div>
 
-                <div className="w-full md:w-40 space-y-1.5">
-                    <label className="text-xs font-medium text-dark-muted ml-1">Direction</label>
+                <div className="w-full md:w-36 space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Direction</label>
                     <CustomSelect
                         name="direction"
                         defaultValue={direction}
@@ -137,35 +142,39 @@ export default async function LogsPage({searchParams}: {
                     />
                 </div>
 
-                <div className="w-full md:w-40 space-y-1.5">
-                    <label className="text-xs font-medium text-dark-muted ml-1">Sort by Date</label>
+                <div className="w-full md:w-36 space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Order</label>
                     <CustomSelect
                         name="sort"
                         defaultValue={sort}
                         options={[
-                            { value: 'desc', label: 'Newest first' },
-                            { value: 'asc', label: 'Oldest first' }
+                            { value: 'desc', label: 'Newest First' },
+                            { value: 'asc', label: 'Oldest First' }
                         ]}
                     />
                 </div>
 
                 <div className="flex gap-2 w-full md:w-auto">
-                    <button type="submit" className="flex-1 md:flex-none bg-primary hover:bg-blue-600 text-white px-6 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 h-[46px]">
-                        <FunnelIcon className="w-4 h-4" />
-                        Apply
+                    <button
+                        type="submit"
+                        className="flex-1 md:flex-none bg-slate-900 hover:bg-slate-800 text-white px-4 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 h-[38px] shadow-sm"
+                    >
+                        Filter
                     </button>
 
-                    <Link href="/dashboard/logs" className="px-4 rounded-xl text-sm font-medium text-dark-muted hover:text-white bg-dark-700 hover:bg-dark-600 transition-all flex items-center justify-center h-[46px]">
+                    <Link
+                        href="/dashboard/logs"
+                        className="px-3 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center justify-center h-[38px]"
+                    >
                         Reset
                     </Link>
                 </div>
             </form>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
                 {logs.length === 0 ? (
-                    <div className="text-center py-20 text-dark-muted border border-dashed border-dark-700/50 rounded-2xl">
-                        <MagnifyingGlassIcon className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                        <p>No logs found matching your criteria.</p>
+                    <div className="text-center py-16 text-slate-400 border border-dashed border-slate-200 rounded-xl bg-white p-8 text-xs">
+                        No logs match your filter criteria.
                     </div>
                 ) : (
                     logs.map((log) => (
@@ -175,34 +184,34 @@ export default async function LogsPage({searchParams}: {
             </div>
 
             {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-6 border-t border-dark-700/50">
-                    <p className="text-sm text-dark-muted">
-                        Page <span className="text-white font-medium">{currentPage}</span> of <span className="text-white font-medium">{totalPages}</span>
+                <div className="flex items-center justify-between pt-4 border-t border-slate-200 text-xs">
+                    <p className="text-slate-500">
+                        Page <strong className="text-slate-900">{currentPage}</strong> of <strong className="text-slate-900">{totalPages}</strong>
                     </p>
                     <div className="flex gap-2">
                         {currentPage > 1 ? (
                             <Link
                                 href={createPageUrl(currentPage - 1)}
-                                className="px-3 py-2 rounded-xl bg-dark-800 border border-dark-700 text-white hover:bg-dark-700 transition-colors flex items-center gap-1 text-sm"
+                                className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1 font-medium shadow-xs"
                             >
-                                <ChevronLeftIcon className="w-4 h-4" /> Previous
+                                <ChevronLeftIcon className="w-3.5 h-3.5" /> Prev
                             </Link>
                         ) : (
-                            <button disabled className="px-3 py-2 rounded-xl bg-dark-900/50 border border-dark-800 text-dark-muted cursor-not-allowed flex items-center gap-1 text-sm">
-                                <ChevronLeftIcon className="w-4 h-4" /> Previous
+                            <button disabled className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 cursor-not-allowed flex items-center gap-1 font-medium">
+                                <ChevronLeftIcon className="w-3.5 h-3.5" /> Prev
                             </button>
                         )}
 
                         {currentPage < totalPages ? (
                             <Link
                                 href={createPageUrl(currentPage + 1)}
-                                className="px-3 py-2 rounded-xl bg-dark-800 border border-dark-700 text-white hover:bg-dark-700 transition-colors flex items-center gap-1 text-sm"
+                                className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1 font-medium shadow-xs"
                             >
-                                Next <ChevronRightIcon className="w-4 h-4" />
+                                Next <ChevronRightIcon className="w-3.5 h-3.5" />
                             </Link>
                         ) : (
-                            <button disabled className="px-3 py-2 rounded-xl bg-dark-900/50 border border-dark-800 text-dark-muted cursor-not-allowed flex items-center gap-1 text-sm">
-                                Next <ChevronRightIcon className="w-4 h-4" />
+                            <button disabled className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 cursor-not-allowed flex items-center gap-1 font-medium">
+                                Next <ChevronRightIcon className="w-3.5 h-3.5" />
                             </button>
                         )}
                     </div>

@@ -2,7 +2,7 @@
 
 import { prisma } from '@/app/lib/prisma'
 import { verifySession } from '@/app/lib/session'
-import { hash, compare } from 'bcrypt'
+import { hash, compare } from 'bcryptjs'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 
@@ -31,7 +31,6 @@ export async function changePasswordAction(prevState: PasswordState, formData: F
     const inputs = { currentPassword, newPassword }
     const errors: { currentPassword?: string, newPassword?: string } = {}
 
-    // Валідація полів
     if (!currentPassword) {
         errors.currentPassword = "Current password is required"
     }
@@ -48,7 +47,6 @@ export async function changePasswordAction(prevState: PasswordState, formData: F
         return { message: "User error", success: false, inputs }
     }
 
-    // Перевірка поточного пароля
     const isValid = await compare(currentPassword, user.password)
     if (!isValid) {
         return {
@@ -86,7 +84,6 @@ export async function updateEmailAction(prevState: EmailState, formData: FormDat
     try {
         const user = await prisma.user.findUnique({ where: { id: userId } })
 
-        // Перевіряємо, чи юзер існує і чи є він адміном
         if (!user || user.role !== 'ADMIN') {
             return { message: "Only administrators can change their login email.", success: false }
         }
@@ -96,12 +93,10 @@ export async function updateEmailAction(prevState: EmailState, formData: FormDat
             data: { email: newEmail }
         })
 
-        // Оновлюємо кеш сторінки, щоб нова пошта одразу відобразилася в інпуті
         revalidatePath('/dashboard/settings')
 
         return { message: "Email updated successfully. Use it for your next login.", success: true }
-    } catch (error) {
-        // Якщо Prisma викидає помилку унікальності поля email
+    } catch {
         return { message: "This email is already in use.", success: false }
     }
 }

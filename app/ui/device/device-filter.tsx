@@ -24,12 +24,12 @@ export function DeviceFilter({ devices }: { devices: { id: string, name: string 
     ]
 
     return (
-        <div className="relative w-full md:w-auto min-w-[220px]">
+        <div className="relative w-full md:w-auto min-w-[200px]">
             <CustomSelect
                 options={options}
                 defaultValue={searchParams.get('device') || ''}
                 onChange={handleChange}
-                icon={<CpuChipIcon className="w-5 h-5" />}
+                icon={<CpuChipIcon className="w-4 h-4 text-slate-400" />}
             />
         </div>
     )

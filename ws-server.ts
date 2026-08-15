@@ -1,21 +1,30 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { PrismaClient } from '@prisma/client';
+import { evaluateAccessRequest, AccessCheckUser } from './app/lib/access-control';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 8080;
 const wss = new WebSocketServer({ port: PORT });
 const prisma = new PrismaClient();
 
-async function resetDeviceStatus() {
-    try {
-        await prisma.device.updateMany({
-            data: { isOnline: false }
-        });
-        console.log('🔄 All devices reset to OFFLINE status on boot.');
-    } catch (error) {
-        console.error('❌ Failed to reset device statuses:', error);
-    }
-}
-resetDeviceStatus();
+// Simple structured logger
+const logger = {
+    info: (msg: string, meta?: Record<string, unknown>) => {
+        const time = new Date().toISOString();
+        console.log(`[${time}] [INFO] ${msg}`, meta ? JSON.stringify(meta) : '');
+    },
+    warn: (msg: string, meta?: Record<string, unknown>) => {
+        const time = new Date().toISOString();
+        console.warn(`[${time}] [WARN] ${msg}`, meta ? JSON.stringify(meta) : '');
+    },
+    error: (msg: string, error?: unknown) => {
+        const time = new Date().toISOString();
+        console.error(`[${time}] [ERROR] ${msg}`, error ?? '');
+    },
+    audit: (action: string, details: Record<string, unknown>) => {
+        const time = new Date().toISOString();
+        console.log(`[${time}] [AUDIT] ${action}:`, JSON.stringify(details));
+    },
+};
 
 interface ExtWebSocket extends WebSocket {
     isAlive: boolean;
@@ -23,32 +32,70 @@ interface ExtWebSocket extends WebSocket {
 }
 
 const devices = new Map<string, ExtWebSocket>();
+const pendingRemoteUnlocks = new Map<string, { userId: string; direction: string }>();
 
-const pendingRemoteUnlocks = new Map<string, { userId: string, direction: string }>();
+// Protocol Message Types
+export type RegisterMessage = { type: 'REGISTER'; mac: string; key?: string };
+export type AccessCheckMessage = { type: 'ACCESS_CHECK'; mac: string; payload: string; direction?: 'ENTRY' | 'EXIT' };
+export type DoorEventMessage = { type: 'DOOR_EVENT'; mac: string; payload: 'OPENED' | 'CLOSED' };
+export type EventMessage = { type: 'EVENT'; mac: string; payload: string; direction?: string };
+export type CommandMessage = { type: 'COMMAND'; target: string; command: string; userId: string };
+export type PassageConfirmedMessage = { type: 'PASSAGE_CONFIRMED'; mac: string; payload: string; direction?: 'ENTRY' | 'EXIT' };
+export type IntrusionAlertMessage = { type: 'INTRUSION_ALERT'; mac: string };
 
-type RegisterMessage = { type: 'REGISTER'; mac: string; };
-type AccessCheckMessage = { type: 'ACCESS_CHECK'; mac: string; payload: string; direction?: string; };
-type DoorEventMessage = { type: 'DOOR_EVENT'; mac: string; payload: string; };
-type EventMessage = { type: 'EVENT'; mac: string; payload: string; direction?: string; };
-type CommandMessage = { type: 'COMMAND'; target: string; command: string; userId: string; };
-type PassageConfirmedMessage = { type: 'PASSAGE_CONFIRMED'; mac: string; payload: string; direction?: string; };
-type IntrusionAlertMessage = { type: 'INTRUSION_ALERT'; mac: string; };
-
-type IotMessage = RegisterMessage | AccessCheckMessage | EventMessage | CommandMessage | DoorEventMessage | PassageConfirmedMessage | IntrusionAlertMessage;
+export type IotMessage =
+    | RegisterMessage
+    | AccessCheckMessage
+    | EventMessage
+    | CommandMessage
+    | DoorEventMessage
+    | PassageConfirmedMessage
+    | IntrusionAlertMessage;
 
 function isIotMessage(obj: unknown): obj is IotMessage {
     if (typeof obj !== 'object' || obj === null) return false;
     const record = obj as Record<string, unknown>;
     if (typeof record.type !== 'string') return false;
-    return ['REGISTER', 'ACCESS_CHECK', 'EVENT', 'COMMAND', 'DOOR_EVENT', 'PASSAGE_CONFIRMED', 'INTRUSION_ALERT'].includes(record.type);
+    return [
+        'REGISTER',
+        'ACCESS_CHECK',
+        'EVENT',
+        'COMMAND',
+        'DOOR_EVENT',
+        'PASSAGE_CONFIRMED',
+        'INTRUSION_ALERT',
+    ].includes(record.type);
 }
 
+function broadcastToClients(data: object, filterWs?: WebSocket) {
+    const payload = JSON.stringify(data);
+    wss.clients.forEach((client) => {
+        if (client !== filterWs && client.readyState === WebSocket.OPEN) {
+            client.send(payload);
+        }
+    });
+}
+
+// Reset devices status on boot
+async function resetDeviceStatus() {
+    try {
+        await prisma.device.updateMany({
+            data: { isOnline: false },
+        });
+        logger.info('Device online states synchronized to OFFLINE on gateway boot.');
+    } catch (error) {
+        logger.error('Failed to reset device statuses on startup', error);
+    }
+}
+resetDeviceStatus();
+
+// Heartbeat & Watchdog Ping Interval (every 10s)
 const interval = setInterval(async () => {
     const activeMacs: string[] = [];
 
     (wss.clients as Set<ExtWebSocket>).forEach((ws) => {
         if (!ws.isAlive) {
-            console.log(`💀 Found dead connection: ${ws.deviceMac || 'unknown'}`);
+            logger.warn(`Watchdog terminated dead connection: ${ws.deviceMac || 'unregistered-client'}`);
             return ws.terminate();
         }
         ws.isAlive = false;
@@ -63,10 +110,10 @@ const interval = setInterval(async () => {
         try {
             await prisma.device.updateMany({
                 where: { macAddress: { in: activeMacs } },
-                data: { lastSeen: new Date() }
+                data: { lastSeen: new Date() },
             });
         } catch (e) {
-            console.error("❌ DB Error updating lastSeen:", e);
+            logger.error('DB Error updating device lastSeen', e);
         }
     }
 }, 10000);
@@ -75,48 +122,52 @@ wss.on('close', () => {
     clearInterval(interval);
 });
 
+// Main Gateway Event Loop
 wss.on('connection', (socket: WebSocket) => {
     const ws = socket as ExtWebSocket;
-
     ws.isAlive = true;
-    console.log('New client connected');
+    logger.info('New client connection established');
 
     ws.on('pong', () => {
         ws.isAlive = true;
     });
-
-    const sendToClient = (client: WebSocket, data: object) => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(data));
-        }
-    };
 
     ws.on('message', async (data) => {
         try {
             const rawParsed: unknown = JSON.parse(data.toString());
 
             if (!isIotMessage(rawParsed)) {
-                console.warn('⚠️ Unknown message format:', rawParsed);
+                logger.warn('Unknown message format received', { rawParsed });
                 return;
             }
 
             const msg = rawParsed;
 
+            // 1. DEVICE REGISTRATION & HANDSHAKE
             if (msg.type === 'REGISTER') {
                 const macUpper = msg.mac.toUpperCase();
-                console.log(`📡 Device requesting registration: ${macUpper}`);
+                logger.info(`Device requesting registration: ${macUpper}`);
 
                 const deviceRecord = await prisma.device.findUnique({
-                    where: { macAddress: macUpper }
+                    where: { macAddress: macUpper },
                 });
 
                 if (!deviceRecord) {
-                    console.warn(`❌ UNAUTHORIZED DEVICE BLOCKED: ${macUpper}`);
+                    logger.warn(`Unauthorized device registration blocked: ${macUpper}`);
                     ws.send(JSON.stringify({ type: 'SYSTEM', command: 'UNAUTHORIZED' }));
                     setTimeout(() => ws.terminate(), 1000);
                     return;
                 }
 
+                // If device has a configured key, verify token
+                if (deviceRecord.deviceKey && msg.key && deviceRecord.deviceKey !== msg.key) {
+                    logger.warn(`Device key authentication failed for: ${macUpper}`);
+                    ws.send(JSON.stringify({ type: 'SYSTEM', command: 'AUTH_FAILED' }));
+                    setTimeout(() => ws.terminate(), 1000);
+                    return;
+                }
+
+                // Evict duplicate connection if any
                 if (devices.has(macUpper)) {
                     const oldSocket = devices.get(macUpper);
                     if (oldSocket && oldSocket !== ws) {
@@ -129,128 +180,121 @@ wss.on('connection', (socket: WebSocket) => {
 
                 await prisma.device.update({
                     where: { id: deviceRecord.id },
-                    data: { isOnline: true, lastSeen: new Date() }
+                    data: { isOnline: true, lastSeen: new Date() },
                 });
 
                 ws.send(JSON.stringify({ type: 'SYSTEM', command: 'REGISTER_OK' }));
-                console.log(`✅ Device Authorized & Online: ${deviceRecord.name} (${macUpper})`);
+                logger.info(`Device authorized and connected: ${deviceRecord.name} (${macUpper})`);
 
-                const statusMsg = { type: 'DEVICE_STATUS', mac: macUpper, isOnline: true };
-                wss.clients.forEach(client => {
-                    if (client.readyState === WebSocket.OPEN) client.send(JSON.stringify(statusMsg));
-                });
+                broadcastToClients({ type: 'DEVICE_STATUS', mac: macUpper, isOnline: true });
             }
 
+            // 2. NFC / RFID ACCESS CHECK
             else if (msg.type === 'ACCESS_CHECK') {
-                const uidString = msg.payload.replace('UID:', '');
+                const uidString = msg.payload.replace('UID:', '').trim();
                 const currentMac = msg.mac.toUpperCase();
-                const direction = msg.direction || 'ENTRY';
+                const direction: 'ENTRY' | 'EXIT' = (msg.direction as 'ENTRY' | 'EXIT') || 'ENTRY';
 
                 if (ws.deviceMac !== currentMac) {
-                    console.warn(`⚠️ SECURITY ALERT: Unregistered socket trying to send ACCESS_CHECK as ${currentMac}`);
+                    logger.warn(`Security alert: Unregistered socket attempted ACCESS_CHECK as ${currentMac}`);
                     return;
                 }
 
-                console.log(`🔍 Access Check: ${uidString} @ ${currentMac} (Dir: ${direction})`);
-
-                const deviceRecord = await prisma.device.findUnique({ where: { macAddress: currentMac } });
+                const deviceRecord = await prisma.device.findUnique({
+                    where: { macAddress: currentMac },
+                });
                 if (!deviceRecord) return;
 
                 await prisma.device.update({
                     where: { id: deviceRecord.id },
-                    data: { isOnline: true, lastSeen: new Date() }
+                    data: { isOnline: true, lastSeen: new Date() },
                 });
 
-                const user = await prisma.user.findUnique({
+                const userRecord = await prisma.user.findUnique({
                     where: { cardUid: uidString },
-                    include: { allowedDevices: true }
+                    include: { allowedDevices: true },
                 });
 
-                let accessGranted = false;
+                const accessUser: AccessCheckUser | null = userRecord
+                    ? {
+                          id: userRecord.id,
+                          name: userRecord.name,
+                          role: userRecord.role,
+                          isActive: userRecord.isActive,
+                          isInside: userRecord.isInside,
+                          validFrom: userRecord.validFrom,
+                          validUntil: userRecord.validUntil,
+                          allowedDevices: userRecord.allowedDevices,
+                      }
+                    : null;
 
-                if (user && user.isActive) {
-                    const now = new Date();
+                const decision = evaluateAccessRequest(accessUser, currentMac, direction);
 
-                    const isStarted = !user.validFrom || now >= user.validFrom;
-                    const isNotExpired = !user.validUntil || now <= user.validUntil;
-
-                    const hasDeviceAccess = user.role === 'ADMIN' || user.allowedDevices.some(d => d.macAddress.toUpperCase() === currentMac);
-
-                    if (isStarted && isNotExpired && hasDeviceAccess) {
-                        if (direction === 'ENTRY') {
-                            if (!user.isInside) {
-                                accessGranted = true;
-                            } else {
-                                console.log(`⛔ ANTI-PASSBACK: ${user.name} вже всередині!`);
-                            }
-                        } else if (direction === 'EXIT') {
-                            if (user.isInside) {
-                                accessGranted = true;
-                            } else {
-                                console.log(`⛔ ANTI-PASSBACK: ${user.name} намагається вийти, хоча він не заходив!`);
-                            }
-                        }
-                    } else {
-                        if (!isStarted || !isNotExpired) {
-                            console.log(`⛔ Access denied for ${user.name}: Card expired or not yet valid.`);
-                        } else if (!hasDeviceAccess) {
-                            console.log(`⛔ Access denied for ${user.name}: No permission for this door.`);
-                        }
-                    }
-                }
-
-                if (accessGranted) {
-                    ws.send(JSON.stringify({
-                        type: 'ACCESS_RESPONSE',
-                        status: 'GRANTED',
-                        relayTime: deviceRecord.relayTime || 5,
-                        relayType: deviceRecord.relayType || 'NO'
-                    }));
+                if (decision.granted) {
+                    logger.info(`Access GRANTED for ${userRecord?.name ?? uidString} at ${currentMac} (${direction})`);
+                    ws.send(
+                        JSON.stringify({
+                            type: 'ACCESS_RESPONSE',
+                            status: 'GRANTED',
+                            relayTime: deviceRecord.relayTime || 5,
+                            relayType: deviceRecord.relayType || 'NO',
+                        })
+                    );
                 } else {
-                    ws.send(JSON.stringify({
-                        type: 'ACCESS_RESPONSE',
-                        status: 'DENIED'
-                    }));
+                    logger.warn(`Access DENIED for card [${uidString}] at ${currentMac}: ${decision.reason}`);
+                    ws.send(
+                        JSON.stringify({
+                            type: 'ACCESS_RESPONSE',
+                            status: 'DENIED',
+                            reason: decision.code,
+                        })
+                    );
 
+                    // Record rejected access attempt
                     await prisma.log.create({
                         data: {
                             accessGranted: false,
                             cardUid: uidString,
                             deviceId: deviceRecord.id,
-                            userId: user ? user.id : null,
-                            userName: user ? user.name : null,      // SNAPSHOT
-                            userRole: user ? user.role : null,      // SNAPSHOT
+                            userId: userRecord ? userRecord.id : null,
+                            userName: userRecord ? userRecord.name : null,
+                            userRole: userRecord ? userRecord.role : null,
                             direction: direction,
-                            eventType: 'ACCESS'
-                        }
+                            eventType: 'ACCESS',
+                        },
                     });
 
-                    const eventMsg = { type: 'EVENT', mac: currentMac, payload: msg.payload, direction };
-                    wss.clients.forEach(client => { if (client !== ws) sendToClient(client, eventMsg); });
+                    broadcastToClients(
+                        { type: 'EVENT', mac: currentMac, payload: msg.payload, direction },
+                        ws
+                    );
                 }
             }
 
+            // 3. PHYSICAL PASSAGE CONFIRMED (AFTER SENSOR / RELAY TRIGGER)
             else if (msg.type === 'PASSAGE_CONFIRMED') {
-                const uidString = msg.payload.replace('UID:', '');
+                const uidString = msg.payload.replace('UID:', '').trim();
                 const currentMac = msg.mac.toUpperCase();
-                const direction = msg.direction || 'ENTRY';
+                const direction: 'ENTRY' | 'EXIT' = (msg.direction as 'ENTRY' | 'EXIT') || 'ENTRY';
 
                 if (ws.deviceMac !== currentMac) return;
 
+                // Handle Remote Unlock Confirmation
                 if (uidString === 'REMOTE') {
                     const pendingInfo = pendingRemoteUnlocks.get(currentMac);
-
                     if (pendingInfo) {
-                        console.log(`🏃‍♂️ PASSAGE CONFIRMED: Remote unlock completed physically on ${currentMac}`);
+                        logger.audit('Remote Passage Confirmed', { mac: currentMac, userId: pendingInfo.userId });
 
-                        const deviceRecord = await prisma.device.findUnique({ where: { macAddress: currentMac } });
-                        const user = await prisma.user.findUnique({ where: { id: pendingInfo.userId } });
+                        const [deviceRecord, user] = await Promise.all([
+                            prisma.device.findUnique({ where: { macAddress: currentMac } }),
+                            prisma.user.findUnique({ where: { id: pendingInfo.userId } }),
+                        ]);
 
                         if (user && deviceRecord) {
                             const isInsideNow = pendingInfo.direction === 'ENTRY';
                             await prisma.user.update({
                                 where: { id: user.id },
-                                data: { isInside: isInsideNow }
+                                data: { isInside: isInsideNow },
                             });
 
                             await prisma.log.create({
@@ -259,41 +303,37 @@ wss.on('connection', (socket: WebSocket) => {
                                     cardUid: 'REMOTE',
                                     deviceId: deviceRecord.id,
                                     userId: user.id,
-                                    userName: user.name,            // SNAPSHOT
-                                    userRole: user.role,            // SNAPSHOT
+                                    userName: user.name,
+                                    userRole: user.role,
                                     direction: pendingInfo.direction,
-                                    eventType: 'ACCESS'
-                                }
+                                    eventType: 'ACCESS',
+                                },
                             });
 
-                            const wsMessage = {
+                            broadcastToClients({
                                 type: 'EVENT',
                                 mac: currentMac,
                                 payload: 'UID:REMOTE',
-                                direction: pendingInfo.direction
-                            };
-                            wss.clients.forEach(client => {
-                                if (client.readyState === WebSocket.OPEN) {
-                                    client.send(JSON.stringify(wsMessage));
-                                }
+                                direction: pendingInfo.direction,
                             });
                         }
                         pendingRemoteUnlocks.delete(currentMac);
-                    } else {
-                        console.warn(`⚠️ Received PASSAGE_CONFIRMED for REMOTE, but no pending user found for MAC: ${currentMac}`);
                     }
                     return;
                 }
 
-                console.log(`🏃‍♂️ PASSAGE CONFIRMED: ${uidString} went ${direction}`);
+                // Handle Card Physical Passage Confirmation
+                logger.info(`Passage Confirmed: ${uidString} went ${direction} at ${currentMac}`);
 
-                const deviceRecord = await prisma.device.findUnique({ where: { macAddress: currentMac } });
-                const user = await prisma.user.findUnique({ where: { cardUid: uidString } });
+                const [deviceRecord, user] = await Promise.all([
+                    prisma.device.findUnique({ where: { macAddress: currentMac } }),
+                    prisma.user.findUnique({ where: { cardUid: uidString } }),
+                ]);
 
                 if (user && deviceRecord) {
                     await prisma.user.update({
                         where: { id: user.id },
-                        data: { isInside: (direction === 'ENTRY') }
+                        data: { isInside: direction === 'ENTRY' },
                     });
 
                     await prisma.log.create({
@@ -302,33 +342,34 @@ wss.on('connection', (socket: WebSocket) => {
                             cardUid: uidString,
                             deviceId: deviceRecord.id,
                             userId: user.id,
-                            userName: user.name,                    // SNAPSHOT
-                            userRole: user.role,                    // SNAPSHOT
+                            userName: user.name,
+                            userRole: user.role,
                             direction: direction,
-                            eventType: 'ACCESS'
-                        }
+                            eventType: 'ACCESS',
+                        },
                     });
 
-                    const eventMsg = { type: 'EVENT', mac: currentMac, payload: msg.payload, direction };
-                    wss.clients.forEach(client => { if (client !== ws) sendToClient(client, eventMsg); });
+                    broadcastToClients(
+                        { type: 'EVENT', mac: currentMac, payload: msg.payload, direction },
+                        ws
+                    );
                 }
             }
 
+            // 4. DOOR MAGNETIC SENSOR STATUS UPDATE
             else if (msg.type === 'DOOR_EVENT') {
                 if (ws.deviceMac !== msg.mac.toUpperCase()) return;
-                const doorState = msg.payload;
-                const doorUpdateMsg = { type: 'DOOR_UPDATE', state: doorState, mac: msg.mac };
-                wss.clients.forEach(client => { if (client !== ws) sendToClient(client, doorUpdateMsg); });
+                broadcastToClients({ type: 'DOOR_UPDATE', state: msg.payload, mac: msg.mac }, ws);
             }
 
+            // 5. INTRUSION / TAMPER ALERT
             else if (msg.type === 'INTRUSION_ALERT') {
                 const currentMac = msg.mac.toUpperCase();
                 if (ws.deviceMac !== currentMac) return;
 
-                console.log(`🚨 УВАГА! ВЗЛОМ ДВЕРЕЙ НА ПРИСТРОЇ: ${currentMac}`);
+                logger.warn(`CRITICAL INTRUSION DETECTED AT: ${currentMac}`);
 
                 const deviceRecord = await prisma.device.findUnique({ where: { macAddress: currentMac } });
-
                 if (deviceRecord) {
                     await prisma.log.create({
                         data: {
@@ -339,145 +380,147 @@ wss.on('connection', (socket: WebSocket) => {
                             userName: null,
                             userRole: null,
                             direction: 'ENTRY',
-                            eventType: 'INTRUSION'
-                        }
+                            eventType: 'INTRUSION',
+                        },
                     });
 
-                    const alertMsg = { type: 'EVENT', mac: currentMac, payload: 'INTRUSION', direction: 'ENTRY' };
-                    wss.clients.forEach(client => { if (client !== ws) sendToClient(client, alertMsg); });
+                    broadcastToClients(
+                        { type: 'EVENT', mac: currentMac, payload: 'INTRUSION', direction: 'ENTRY' },
+                        ws
+                    );
                 }
             }
 
+            // 6. GENERIC EVENT RELAY
             else if (msg.type === 'EVENT') {
                 if (ws.deviceMac !== msg.mac.toUpperCase()) return;
-                const eventMsg = {
-                    type: 'EVENT',
-                    mac: msg.mac,
-                    payload: msg.payload,
-                    direction: msg.direction
-                };
-                wss.clients.forEach(client => {
-                    if (client !== ws) sendToClient(client, eventMsg);
-                });
+                broadcastToClients(
+                    {
+                        type: 'EVENT',
+                        mac: msg.mac,
+                        payload: msg.payload,
+                        direction: msg.direction,
+                    },
+                    ws
+                );
             }
 
+            // 7. ADMIN REMOTE COMMANDS (UNLOCK, CONFIG, RESET_WIFI)
             else if (msg.type === 'COMMAND') {
                 const { target, command, userId } = msg;
                 const macUpper = target.toUpperCase();
 
                 if (!userId) {
-                    console.warn(`❌ Command blocked: No userId provided for ${command}`);
+                    logger.warn(`Command rejected: No userId provided for command ${command}`);
                     return;
                 }
 
                 const [user, deviceRecord] = await Promise.all([
                     prisma.user.findUnique({
                         where: { id: userId },
-                        include: { allowedDevices: true }
+                        include: { allowedDevices: true },
                     }),
                     prisma.device.findUnique({
-                        where: { macAddress: macUpper }
-                    })
+                        where: { macAddress: macUpper },
+                    }),
                 ]);
 
                 if (!user || !user.isActive || !deviceRecord) {
-                    console.warn(`❌ Command blocked: User not found, inactive, or device not found`);
+                    logger.warn(`Command rejected: User inactive or device not found for target ${macUpper}`);
                     return;
                 }
 
-                // Додатковий захист для критичної команди RESET_WIFI
                 if (command === 'RESET_WIFI' && user.role !== 'ADMIN') {
-                    console.warn(`🚫 SECURITY ALERT: User ${user.name} (Role: ${user.role}) attempted to Factory Reset device ${macUpper}`);
+                    logger.warn(`Security alert: Non-admin ${user.name} attempted factory reset on ${macUpper}`);
                     return;
                 }
 
-                let hasAccess = false;
-                if (user.role === 'ADMIN') {
-                    hasAccess = true;
-                } else {
-                    hasAccess = user.allowedDevices.some(d => d.macAddress.toUpperCase() === macUpper);
-                }
+                const hasAccess =
+                    user.role === 'ADMIN' ||
+                    user.allowedDevices.some((d) => d.macAddress.toUpperCase() === macUpper);
 
                 if (!hasAccess) {
-                    console.warn(`❌ Command blocked: User ${user.name} has no access to ${macUpper}`);
+                    logger.warn(`Command blocked: User ${user.name} lacks permissions for ${macUpper}`);
                     return;
                 }
 
                 const targetSocket = devices.get(macUpper);
 
                 if (targetSocket && targetSocket.readyState === WebSocket.OPEN) {
-
                     if (command === 'OPEN_DOOR' || command === 'UNLOCK') {
-                        targetSocket.send(JSON.stringify({
-                            type: 'COMMAND',
-                            command: 'UNLOCK',
-                            relayTime: deviceRecord.relayTime || 5,
-                            relayType: deviceRecord.relayType || 'NO'
-                        }));
+                        targetSocket.send(
+                            JSON.stringify({
+                                type: 'COMMAND',
+                                command: 'UNLOCK',
+                                relayTime: deviceRecord.relayTime || 5,
+                                relayType: deviceRecord.relayType || 'NO',
+                            })
+                        );
 
-                        console.log(`✅ Command "UNLOCK" sent to device ${macUpper} by ${user.name}`);
+                        logger.audit('Remote Unlock Triggered', { target: macUpper, initiatedBy: user.name });
 
                         const newDirection = user.isInside ? 'EXIT' : 'ENTRY';
                         pendingRemoteUnlocks.set(macUpper, { userId: user.id, direction: newDirection });
-                        console.log(`⏳ Waiting for physical door opening by ${user.name}...`);
 
                         setTimeout(() => {
                             if (pendingRemoteUnlocks.has(macUpper)) {
                                 pendingRemoteUnlocks.delete(macUpper);
-                                console.log(`⏱️ Remote unlock timeout for ${macUpper}. Door was not opened.`);
+                                logger.info(`Remote unlock timeout for ${macUpper}. Door was not opened.`);
                             }
                         }, 10000);
-
                     } else if (command === 'UPDATE_CONFIG') {
-                        targetSocket.send(JSON.stringify({
-                            type: 'COMMAND',
-                            command: 'UPDATE_CONFIG',
-                            relayTime: deviceRecord.relayTime || 5,
-                            relayType: deviceRecord.relayType || 'NO'
-                        }));
-                        console.log(`🔄 Config update sent to device ${macUpper} by ${user.name}`);
-
+                        targetSocket.send(
+                            JSON.stringify({
+                                type: 'COMMAND',
+                                command: 'UPDATE_CONFIG',
+                                relayTime: deviceRecord.relayTime || 5,
+                                relayType: deviceRecord.relayType || 'NO',
+                            })
+                        );
+                        logger.audit('Device Config Updated', { target: macUpper, updatedBy: user.name });
                     } else if (command === 'RESET_WIFI') {
-                        targetSocket.send(JSON.stringify({
-                            type: 'COMMAND',
-                            command: 'RESET_WIFI'
-                        }));
-                        console.log(`⚠️ CRITICAL: Factory Wi-Fi Reset sent to device ${macUpper} by Admin ${user.name}`);
-
+                        targetSocket.send(
+                            JSON.stringify({
+                                type: 'COMMAND',
+                                command: 'RESET_WIFI',
+                            })
+                        );
+                        logger.audit('Factory Reset Sent', { target: macUpper, initiatedBy: user.name });
                     } else {
-                        targetSocket.send(JSON.stringify({
-                            type: 'COMMAND',
-                            command: command
-                        }));
-                        console.log(`✅ Command "${command}" sent to device ${macUpper} by ${user.name}`);
+                        targetSocket.send(
+                            JSON.stringify({
+                                type: 'COMMAND',
+                                command: command,
+                            })
+                        );
                     }
                 } else {
-                    console.warn(`⚠️ Failed to send command: Device ${macUpper} is offline`);
+                    logger.warn(`Failed to dispatch command "${command}": Device ${macUpper} is OFFLINE`);
                 }
             }
-
         } catch (e) {
-            console.error('❌ Error processing message:', e);
+            logger.error('Error processing gateway message', e);
         }
     });
 
     ws.on('close', async () => {
         if (ws.deviceMac) {
-            console.log(`🔌 Disconnected: ${ws.deviceMac}`);
+            logger.info(`Device disconnected: ${ws.deviceMac}`);
             devices.delete(ws.deviceMac);
 
             const currentActiveSocket = devices.get(ws.deviceMac);
             if (!currentActiveSocket) {
-                await prisma.device.update({
-                    where: { macAddress: ws.deviceMac },
-                    data: { isOnline: false }
-                }).catch(err => console.error("DB Error:", err));
+                await prisma.device
+                    .update({
+                        where: { macAddress: ws.deviceMac },
+                        data: { isOnline: false },
+                    })
+                    .catch((err) => logger.error('DB Error updating device offline state', err));
 
-                const statusMsg = { type: 'DEVICE_STATUS', mac: ws.deviceMac, isOnline: false };
-                wss.clients.forEach(client => {
-                    if (client.readyState === WebSocket.OPEN) client.send(JSON.stringify(statusMsg));
-                });
+                broadcastToClients({ type: 'DEVICE_STATUS', mac: ws.deviceMac, isOnline: false });
             }
         }
     });
 });
+
+logger.info(`Smart ACS WebSocket Gateway running on ws://localhost:${PORT}`);

@@ -2,10 +2,10 @@ import {
     ArrowRightEndOnRectangleIcon,
     ArrowLeftStartOnRectangleIcon,
     ExclamationTriangleIcon,
-    DevicePhoneMobileIcon,
-    ClockIcon
+    DevicePhoneMobileIcon
 } from '@heroicons/react/24/outline'
 import { LogWithDetails } from '@/app/dashboard/actions'
+import { Badge } from '@/app/ui/badge'
 
 export function LogCard({ log }: { log: LogWithDetails }) {
     const logDate = new Date(log.timestamp)
@@ -14,132 +14,86 @@ export function LogCard({ log }: { log: LogWithDetails }) {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
-        timeZone: 'Europe/Kyiv'
     })
 
     const timeString = logDate.toLocaleTimeString('en-GB', {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-        timeZone: 'Europe/Kyiv'
     })
 
-    // ...
     const isIntrusion = log.eventType === 'INTRUSION' || log.cardUid === 'INTRUSION'
     const isRemoteUnlock = log.cardUid === 'REMOTE'
-
-    let accentColor = "bg-dark-600"
-    if (isIntrusion) accentColor = "bg-red-500"
-    else if (log.accessGranted) accentColor = "bg-green-500"
-    else accentColor = "bg-yellow-500"
-
-    // === ВАЖЛИВО: Використовуємо snapshot-дані, якщо юзера було видалено ===
-    const displayName = log.user?.name ?? log.userName ?? 'Unknown User'
+    const displayName = log.user?.name ?? log.userName ?? 'Unknown Card'
     const isGuest = (log.user?.role ?? log.userRole) === 'GUEST'
-    const isDeleted = !log.user && (log.userName || log.userRole)
-
-    let timeLeftString = null;
-    let isExpired = false;
-
-    if (isGuest) {
-        if (log.user?.validUntil) {
-            const now = new Date();
-            const validUntil = new Date(log.user.validUntil);
-
-            if (validUntil.getTime() > now.getTime()) {
-                const diffMins = Math.floor((validUntil.getTime() - now.getTime()) / 60000);
-                const hours = Math.floor(diffMins / 60);
-                const mins = diffMins % 60;
-                const days = Math.floor(hours / 24);
-
-                if (days > 0) timeLeftString = `${days}d left`;
-                else if (hours > 0) timeLeftString = `${hours}h ${mins}m`;
-                else timeLeftString = `${mins}m`;
-            } else {
-                isExpired = true;
-                timeLeftString = "Expired";
-            }
-        } else if (isDeleted) {
-            timeLeftString = "Deleted Profile";
-        }
-    }
 
     return (
-        <div className="relative flex flex-col md:flex-row md:items-center justify-between p-4 pl-5 bg-dark-800/40 rounded-xl border border-dark-700/50 hover:bg-dark-800/80 transition-colors overflow-hidden group">
-
-            <div className={`absolute left-0 top-0 bottom-0 w-1 ${accentColor}`} />
-
-            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6 w-full">
-
-                <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                        {isIntrusion ? (
-                            <p className="font-semibold text-sm text-red-400 flex items-center gap-1.5">
-                                <ExclamationTriangleIcon className="w-4 h-4" />
-                                FORCED ENTRY
-                            </p>
-                        ) : (
-                            <>
-                                <p className="font-semibold text-sm text-gray-200 flex items-center gap-2">
-                                    {displayName}
-                                    {isDeleted && (
-                                        <span className="text-[10px] bg-dark-700 text-dark-muted px-1.5 py-0.5 rounded border border-dark-600 font-normal uppercase tracking-wider">
-                                            Deleted
-                                        </span>
-                                    )}
-                                </p>
-                                {isGuest && (
-                                    <span className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border uppercase tracking-wider font-bold ${
-                                        isExpired || isDeleted
-                                            ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                                            : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                                    }`}>
-                                        <ClockIcon className="w-3 h-3" /> GUEST ({timeLeftString})
-                                    </span>
-                                )}
-                            </>
-                        )}
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-dark-muted">
-                        {isIntrusion ? (
-                            <span>Door opened without a card</span>
-                        ) : isRemoteUnlock ? (
-                            <span className="flex items-center gap-1.5 text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20 font-medium">
-                                <DevicePhoneMobileIcon className="w-4 h-4" /> App Unlock
-                            </span>
-                        ) : (
-                            <span className="font-mono bg-dark-900/50 px-1.5 py-0.5 rounded border border-dark-700/50">UID: {log.cardUid}</span>
-                        )}
-                        {log.device && <span className="text-dark-600">•</span>}
-                        {log.device && <span>{log.device.name}</span>}
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-3 mt-3 md:mt-0">
-                    {!isIntrusion && (
-                        <div className="flex items-center gap-1 text-xs font-medium text-gray-400 bg-dark-900/50 px-2 py-1 rounded-lg border border-dark-700/50">
-                            {log.direction === 'ENTRY' ? <ArrowRightEndOnRectangleIcon className="w-4 h-4 text-blue-400" /> : <ArrowLeftStartOnRectangleIcon className="w-4 h-4 text-purple-400" />}
-                            {log.direction === 'ENTRY' ? 'Entry' : 'Exit'}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors gap-3">
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                    {isIntrusion ? (
+                        <span className="font-semibold text-xs text-rose-600 flex items-center gap-1">
+                            <ExclamationTriangleIcon className="w-4 h-4" />
+                            Forced Entry Alarm
+                        </span>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm text-slate-900 truncate">{displayName}</span>
+                            {isGuest && (
+                                <Badge size="sm" variant="info">
+                                    Guest
+                                </Badge>
+                            )}
                         </div>
                     )}
-
-                    <div className={`text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-lg uppercase border ${
-                        isIntrusion ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                            log.accessGranted ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                                'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-                    }`}>
-                        {isIntrusion ? 'ALERT' : log.accessGranted ? 'GRANTED' : 'DENIED'}
-                    </div>
                 </div>
 
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-slate-500">
+                    {isIntrusion ? (
+                        <span>Door opened without badge</span>
+                    ) : isRemoteUnlock ? (
+                        <span className="inline-flex items-center gap-1 text-slate-700">
+                            <DevicePhoneMobileIcon className="w-3.5 h-3.5 text-slate-500" /> Remote App Unlock
+                        </span>
+                    ) : (
+                        <span className="font-mono text-[11px] text-slate-600">UID: {log.cardUid}</span>
+                    )}
+
+                    {log.device && (
+                        <>
+                            <span>•</span>
+                            <span className="text-slate-600">{log.device.name}</span>
+                        </>
+                    )}
+                </div>
             </div>
 
-            <div className="mt-4 md:mt-0 md:ml-6 md:text-right shrink-0">
-                <p className="text-sm text-gray-300 font-medium">{timeString}</p>
-                <p className="text-xs text-dark-muted mt-0.5">{dateString}</p>
-            </div>
+            <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                {!isIntrusion && log.direction && (
+                    <span className="inline-flex items-center gap-1 text-xs text-slate-600 font-medium">
+                        {log.direction === 'ENTRY' ? (
+                            <ArrowRightEndOnRectangleIcon className="w-3.5 h-3.5 text-slate-400" />
+                        ) : (
+                            <ArrowLeftStartOnRectangleIcon className="w-3.5 h-3.5 text-slate-400" />
+                        )}
+                        {log.direction === 'ENTRY' ? 'Entry' : 'Exit'}
+                    </span>
+                )}
 
+                <Badge
+                    size="sm"
+                    variant={isIntrusion ? 'danger' : log.accessGranted ? 'success' : 'danger'}
+                    dot
+                    pulse={isIntrusion}
+                >
+                    {isIntrusion ? 'Alert' : log.accessGranted ? 'Granted' : 'Denied'}
+                </Badge>
+
+                <div className="text-right">
+                    <p className="text-xs font-mono text-slate-900 font-medium">{timeString}</p>
+                    <p className="text-[10px] text-slate-400">{dateString}</p>
+                </div>
+            </div>
         </div>
     )
 }

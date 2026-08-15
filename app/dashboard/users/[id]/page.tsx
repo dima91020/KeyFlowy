@@ -6,12 +6,14 @@ import {
     UserIcon,
     BriefcaseIcon,
     CreditCardIcon,
-    BoltIcon,
     ClockIcon,
+    PencilSquareIcon
 } from '@heroicons/react/24/outline'
 import { getUserProfileStatsAction } from '@/app/dashboard/actions'
 import { WeeklyChart } from '@/app/ui/dashboard/weekly-chart'
 import { LogCard } from '@/app/ui/logs/log-card'
+import { formatGuestTimeRemaining } from '@/app/lib/access-control'
+import { Badge } from '@/app/ui/badge'
 
 export default async function UserProfilePage({ params }: { params: Promise<{ id: string }> }) {
     const currentUserId = await verifySession()
@@ -22,10 +24,10 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
 
     if (!profileData) {
         return (
-            <div className="p-6 text-center text-white">
-                <h1 className="text-2xl font-bold">User not found</h1>
-                <Link href="/dashboard/users" className="text-primary hover:underline mt-4 inline-block">
-                    Back to users
+            <div className="p-8 text-center text-slate-900">
+                <h1 className="text-xl font-bold">User not found</h1>
+                <Link href="/dashboard/users" className="text-slate-600 hover:underline text-sm mt-2 inline-block">
+                    ← Back to users
                 </Link>
             </div>
         )
@@ -33,85 +35,72 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
 
     const { user, recentLogs, weeklyStats, avgWorkHours } = profileData
 
-    // Логіка перевірки гостьового часу
     const now = new Date();
     const validUntil = user.validUntil ? new Date(user.validUntil) : null;
     const isExpired = validUntil ? now.getTime() > validUntil.getTime() : false;
     const isActuallyActive = user.isActive && !isExpired;
-
-    let timeLeftString = null;
-    if (user.role === 'GUEST' && validUntil && !isExpired) {
-        const diffMs = validUntil.getTime() - now.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
-        const hours = Math.floor(diffMins / 60);
-        const mins = diffMins % 60;
-        const days = Math.floor(hours / 24);
-
-        if (days > 0) timeLeftString = `${days}d ${hours % 24}h left`;
-        else if (hours > 0) timeLeftString = `${hours}h ${mins}m left`;
-        else timeLeftString = `${mins}m left`;
-    }
+    const timeLeftString = user.role === 'GUEST' ? formatGuestTimeRemaining(validUntil, now) : null;
 
     return (
-        <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
-            <Link
-                href="/dashboard/users"
-                className="inline-flex items-center gap-2 text-sm text-dark-muted hover:text-white transition-colors"
-            >
-                <ChevronLeftIcon className="w-4 h-4" /> Back to Users list
-            </Link>
+        <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
+            <div className="flex items-center justify-between">
+                <Link
+                    href="/dashboard/users"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+                >
+                    <ChevronLeftIcon className="w-3.5 h-3.5" /> Back to Users
+                </Link>
 
-            <div className="bg-dark-800 border border-dark-700 rounded-2xl p-6 shadow-lg flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
+                <Link
+                    href={`/dashboard/users/${user.id}/edit`}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+                >
+                    <PencilSquareIcon className="w-3.5 h-3.5" /> Edit Profile
+                </Link>
+            </div>
+
+            {/* Profile Overview Card */}
+            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-dark-700 rounded-full flex items-center justify-center border border-dark-600 overflow-hidden shrink-0">
+                    <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 text-slate-600 font-bold text-base overflow-hidden shrink-0">
                         {user.image ? (
                             /* eslint-disable-next-line @next/next/no-img-element */
                             <img src={user.image} alt={user.name || 'User'} className="w-full h-full object-cover" />
                         ) : (
-                            <UserIcon className="w-8 h-8 text-dark-muted" />
+                            <UserIcon className="w-7 h-7 text-slate-400" />
                         )}
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-white">{user.name}</h1>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-dark-muted">
-                            <span className="flex items-center gap-1.5"><BriefcaseIcon className="w-4 h-4" /> {user.jobTitle || user.role}</span>
-                            <span className="flex items-center gap-1.5"><CreditCardIcon className="w-4 h-4" /> UID: {user.cardUid || 'No card'}</span>
+                        <h1 className="text-xl font-bold text-slate-900">{user.name}</h1>
+                        <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500">
+                            <span className="flex items-center gap-1"><BriefcaseIcon className="w-3.5 h-3.5 text-slate-400" /> {user.jobTitle || user.role}</span>
+                            <span className="flex items-center gap-1"><CreditCardIcon className="w-3.5 h-3.5 text-slate-400" /> UID: <strong className="font-mono text-slate-800">{user.cardUid || 'None'}</strong></span>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-2 min-w-[140px]">
-                    <div className={`px-3 py-1.5 rounded-lg border text-center text-xs font-bold tracking-wide uppercase ${
-                        isActuallyActive
-                            ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                            : isExpired
-                                ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                                : 'bg-red-500/10 text-red-400 border-red-500/20'
-                    }`}>
-                        {!user.isActive ? 'Blocked Manually' : isExpired ? 'Access Expired' : 'Active Account'}
-                    </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <Badge
+                        variant={!user.isActive ? 'danger' : isExpired ? 'warning' : 'success'}
+                        dot
+                    >
+                        {!user.isActive ? 'Blocked' : isExpired ? 'Expired' : 'Active'}
+                    </Badge>
 
-                    {/* Таймер для гостя */}
                     {timeLeftString && (
-                        <div className="px-3 py-1.5 rounded-lg border text-center text-xs font-bold tracking-wide uppercase bg-yellow-500/10 text-yellow-500 border-yellow-500/20 shadow-inner flex items-center justify-center gap-1.5">
-                            <ClockIcon className="w-3.5 h-3.5" /> {timeLeftString}
-                        </div>
+                        <Badge variant="warning" dot icon={<ClockIcon className="w-3.5 h-3.5" />}>
+                            {timeLeftString}
+                        </Badge>
                     )}
 
-                    <div className={`px-3 py-1.5 rounded-lg border text-center text-xs font-bold tracking-wide uppercase ${
-                        user.isInside
-                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                            : 'bg-dark-700/50 text-dark-muted border-dark-600'
-                    }`}>
-                        {user.isInside ? 'Currently Inside' : 'Outside'}
-                    </div>
+                    <Badge variant="neutral" dot>
+                        {user.isInside ? 'Inside Facility' : 'Outside'}
+                    </Badge>
 
                     {user.role !== 'GUEST' && (
-                        <div className="px-3 py-1.5 rounded-lg border text-center text-xs font-bold tracking-wide uppercase bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-inner">
-                            <span className="flex items-center justify-center gap-1.5">
-                                <ClockIcon className="w-3.5 h-3.5" /> {avgWorkHours}h / day
-                            </span>
-                        </div>
+                        <Badge variant="neutral" icon={<ClockIcon className="w-3.5 h-3.5 text-slate-400" />}>
+                            Avg: {avgWorkHours}h / day
+                        </Badge>
                     )}
                 </div>
             </div>
@@ -121,16 +110,15 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
                     <WeeklyChart data={weeklyStats} showWorkHours={true} />
                 </div>
 
-                <div className="bg-dark-800 border border-dark-700 rounded-2xl p-6 shadow-lg flex flex-col">
-                    <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                        <BoltIcon className="w-5 h-5 text-primary" />
-                        Recent Activity
+                <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col">
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4">
+                        Recent Access Logs
                     </h3>
 
-                    <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1">
+                    <div className="space-y-2.5 overflow-y-auto flex-1 max-h-[340px]">
                         {recentLogs.length === 0 ? (
-                            <div className="text-center py-10 text-dark-muted border border-dashed border-dark-700/50 rounded-xl">
-                                No recent activity.
+                            <div className="text-center py-10 text-xs text-slate-400 border border-dashed border-slate-200 rounded-lg">
+                                No activity recorded.
                             </div>
                         ) : (
                             recentLogs.map((log) => (
@@ -140,10 +128,10 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
                     </div>
 
                     <Link
-                        href={`/dashboard/logs?query=${user.name}`}
-                        className="mt-4 w-full py-2 bg-dark-900 hover:bg-dark-700 border border-dark-700 rounded-xl text-center text-sm font-medium text-white transition-colors"
+                        href={`/dashboard/logs?query=${encodeURIComponent(user.name || '')}`}
+                        className="mt-3 w-full py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-center text-xs font-medium text-slate-700 transition-colors"
                     >
-                        View Full History
+                        View Full Filtered Logs →
                     </Link>
                 </div>
             </div>

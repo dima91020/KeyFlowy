@@ -2,38 +2,33 @@
 
 import { useState, useRef, useEffect } from 'react'
 import {
-    KeyIcon,
     LockOpenIcon,
     WifiIcon,
     ArrowPathIcon,
     Cog6ToothIcon,
     NoSymbolIcon,
-    MapPinIcon
+    CreditCardIcon
 } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Badge } from '@/app/ui/badge'
 
 type Device = { id: string; name: string; macAddress: string; isOnline: boolean; relayTime: number }
 type User = { id: string; name: string; jobTitle: string | null; cardUid: string | null; isActive: boolean; isInside: boolean; allowedDevices: Device[] }
 
 export function EmployeePortal({ user }: { user: User }) {
     const [unlockingId, setUnlockingId] = useState<string | null>(null)
-    const [prevAllowedDevices, setPrevAllowedDevices] = useState<Device[]>(user.allowedDevices)
     const [devices, setDevices] = useState<Device[]>(user.allowedDevices)
-
     const socketRef = useRef<WebSocket | null>(null)
     const router = useRouter()
 
-    if (user.allowedDevices !== prevAllowedDevices) {
-        setPrevAllowedDevices(user.allowedDevices)
+    useEffect(() => {
         setDevices(user.allowedDevices)
-    }
+    }, [user.allowedDevices])
 
     useEffect(() => {
         const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080'
         const ws = new WebSocket(wsUrl)
-
-        ws.onopen = () => console.log('Employee connected to WS')
 
         ws.onmessage = (event) => {
             try {
@@ -52,13 +47,17 @@ export function EmployeePortal({ user }: { user: User }) {
                 if (data.type === 'EVENT' || data.type === 'PASSAGE_CONFIRMED') {
                     router.refresh()
                 }
-            } catch (e) {
-                console.error("WS Message Error:", e)
+            } catch {
+                // Ignore malformed WS packets
             }
         }
 
         socketRef.current = ws
-        return () => ws.close()
+        return () => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.close()
+            }
+        }
     }, [router])
 
     const handleUnlock = (device: Device) => {
@@ -75,122 +74,111 @@ export function EmployeePortal({ user }: { user: User }) {
             }
 
             socketRef.current.send(JSON.stringify(commandMsg))
-
             const timeoutDuration = device.relayTime ? device.relayTime * 1000 : 5000;
 
             setTimeout(() => {
                 setUnlockingId(null)
             }, timeoutDuration)
-
         } else {
             alert("Connection error: Cannot reach the server.")
         }
     }
 
     return (
-        <div className="p-6 space-y-8 text-white max-w-5xl mx-auto">
-            <div className="flex justify-between items-end mb-10">
+        <div className="p-6 md:p-8 space-y-6 max-w-4xl mx-auto">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-200">
                 <div>
-                    <h1 className="text-3xl font-bold">My Access Portal</h1>
-                    <p className="text-dark-muted mt-1">View your credentials and manage remote access.</p>
+                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Employee Portal</h1>
+                    <p className="text-slate-500 text-sm mt-0.5">Manage digital access and remote door permissions.</p>
                 </div>
                 <Link
                     href="/dashboard/settings"
-                    className="bg-dark-800 hover:bg-dark-700 border border-dark-700 px-4 py-2.5 rounded-xl font-medium transition-colors flex items-center gap-2 text-sm"
+                    className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-3.5 py-2 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 shadow-sm"
                 >
-                    <Cog6ToothIcon className="w-5 h-5" />
-                    Settings
+                    <Cog6ToothIcon className="w-4 h-4" />
+                    Account Settings
                 </Link>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
-
-                <div className="flex flex-col space-y-4">
-                    <h3 className="text-xl font-bold px-1 flex items-center gap-2">
-                        <KeyIcon className="text-primary w-5 h-5" /> Digital Pass
-                    </h3>
-
-                    <div className="flex-1 bg-gradient-to-br from-dark-800 to-dark-900 border border-dark-700 p-8 rounded-3xl shadow-2xl relative overflow-hidden flex flex-col">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
-                        <div className="relative z-10 flex-1 flex flex-col justify-between">
-                            <div className="flex justify-between items-start mb-8">
-                                <div>
-                                    <p className="text-sm text-dark-muted mb-1">Employee</p>
-                                    <h2 className="text-2xl font-bold text-white">{user.name}</h2>
-                                    <p className="text-primary font-medium">{user.jobTitle || 'Staff Member'}</p>
-                                </div>
-                                <div className={`px-3 py-1 rounded-full text-xs font-bold border ${user.isActive ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                                    {user.isActive ? 'ACTIVE' : 'BLOCKED'}
-                                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Employee Pass Card */}
+                <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col justify-between space-y-6">
+                    <div>
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Employee Badge</span>
+                                <h2 className="text-xl font-bold text-slate-900 mt-0.5">{user.name}</h2>
+                                <p className="text-sm text-slate-600 font-medium">{user.jobTitle || 'Staff Member'}</p>
                             </div>
-
-                            <div className="bg-dark-950/50 p-4 rounded-2xl border border-dark-700/50 backdrop-blur-sm mt-auto">
-                                <div className="flex justify-between items-center mb-2">
-                                    <p className="text-xs text-dark-muted uppercase tracking-wider">Card UID</p>
-                                    <span className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${user.isInside ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'}`}>
-                                        <MapPinIcon className="w-3 h-3" />
-                                        {user.isInside ? 'Inside' : 'Outside'}
-                                    </span>
-                                </div>
-                                <p className="font-mono text-lg text-white tracking-widest">{user.cardUid || 'NO CARD ASSIGNED'}</p>
-                            </div>
+                            <Badge variant={user.isActive ? 'success' : 'danger'} dot>
+                                {user.isActive ? 'Active' : 'Blocked'}
+                            </Badge>
                         </div>
                     </div>
-                </div>
 
-                <div className="flex flex-col space-y-4">
-                    <h3 className="text-xl font-bold px-1 flex items-center gap-2">
-                        <LockOpenIcon className="text-purple-400 w-5 h-5" /> Permitted Access Points
-                    </h3>
-
-                    <div className="flex-1 bg-dark-800 border border-dark-700 rounded-3xl p-6 flex flex-col">
-                        {!user.isActive ? (
-                            <div className="flex-1 flex flex-col items-center justify-center text-red-400 text-center opacity-80 py-10">
-                                <NoSymbolIcon className="w-12 h-12 mb-3 opacity-50" />
-                                <p className="font-bold">Access Denied</p>
-                                <p className="text-sm mt-1">Your account has been deactivated by the administrator.</p>
-                            </div>
-                        ) : devices.length === 0 ? (
-                            <div className="flex-1 flex flex-col items-center justify-center text-dark-muted text-center py-10">
-                                <WifiIcon className="w-12 h-12 mb-3 opacity-20" />
-                                <p>No access points assigned</p>
-                                <p className="text-sm mt-1">Contact your administrator to grant access.</p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 gap-3">
-                                {devices.map((device) => {
-                                    const isUnlocking = unlockingId === device.id;
-
-                                    return (
-                                        <div key={device.id} className="bg-dark-900 border border-dark-700 p-4 rounded-2xl flex items-center justify-between group hover:border-primary/50 transition-all">
-                                            <div>
-                                                <h4 className="font-bold text-white">{device.name}</h4>
-                                                <p className="text-xs text-dark-muted mt-0.5 flex items-center gap-1.5">
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${device.isOnline ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                                                    {device.isOnline ? 'Online' : 'Offline'}
-                                                </p>
-                                            </div>
-
-                                            <button
-                                                onClick={() => handleUnlock(device)}
-                                                disabled={!device.isOnline || isUnlocking}
-                                                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 disabled:opacity-50 ${
-                                                    isUnlocking
-                                                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                                                        : 'bg-primary/10 hover:bg-primary text-primary hover:text-white'
-                                                }`}
-                                            >
-                                                {isUnlocking ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <LockOpenIcon className="w-4 h-4" />}
-                                                {isUnlocking ? 'Opened' : 'Unlock'}
-                                            </button>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        )}
+                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 font-medium flex items-center gap-1">
+                                <CreditCardIcon className="w-3.5 h-3.5 text-slate-400" /> Card UID
+                            </span>
+                            <span className="text-slate-600 font-medium">
+                                Location: <strong className="text-slate-900">{user.isInside ? 'Inside' : 'Outside'}</strong>
+                            </span>
+                        </div>
+                        <p className="font-mono text-base font-semibold text-slate-800 tracking-wider">
+                            {user.cardUid || 'NO BADGE ASSIGNED'}
+                        </p>
                     </div>
                 </div>
 
+                {/* Authorized Doors */}
+                <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col space-y-4">
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                        Assigned Access Points
+                    </h3>
+
+                    {!user.isActive ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-center py-8">
+                            <NoSymbolIcon className="w-8 h-8 mb-2 text-slate-300" />
+                            <p className="text-sm font-medium text-slate-700">Account Inactive</p>
+                            <p className="text-xs text-slate-400 mt-0.5">Please contact your administrator for activation.</p>
+                        </div>
+                    ) : devices.length === 0 ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-center py-8">
+                            <WifiIcon className="w-8 h-8 mb-2 text-slate-300" />
+                            <p className="text-sm font-medium text-slate-700">No Access Points</p>
+                            <p className="text-xs text-slate-400 mt-0.5">No doors have been assigned to your profile yet.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-2.5">
+                            {devices.map((device) => {
+                                const isUnlocking = unlockingId === device.id;
+
+                                return (
+                                    <div key={device.id} className="bg-slate-50 border border-slate-200 p-3.5 rounded-lg flex items-center justify-between">
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-slate-900">{device.name}</h4>
+                                            <div className="mt-1">
+                                                <Badge size="sm" variant={device.isOnline ? 'success' : 'neutral'} dot pulse={device.isOnline}>
+                                                    {device.isOnline ? 'Ready' : 'Offline'}
+                                                </Badge>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={() => handleUnlock(device)}
+                                            disabled={!device.isOnline || isUnlocking}
+                                            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-slate-900 hover:bg-slate-800 text-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-sm"
+                                        >
+                                            {isUnlocking ? <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" /> : <LockOpenIcon className="w-3.5 h-3.5" />}
+                                            {isUnlocking ? 'Unlocking...' : 'Unlock Door'}
+                                        </button>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     )

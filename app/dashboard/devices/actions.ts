@@ -7,12 +7,11 @@ import { z } from 'zod'
 import { verifySession } from '@/app/lib/session'
 import { Prisma } from '@prisma/client'
 
-// 1. Схеми валідації
 const updateDeviceSchema = z.object({
     id: z.string(),
     name: z.string().min(2, "Name must be at least 2 characters").max(30, "Name is too long"),
     relayTime: z.coerce.number().min(1, "Minimum 1 second").max(60, "Maximum 60 seconds"),
-    relayType: z.enum(["NO", "NC"]), // Додали валідацію типу реле
+    relayType: z.enum(["NO", "NC"]),
 })
 
 const deleteDeviceSchema = z.object({
@@ -25,7 +24,6 @@ const createDeviceSchema = z.object({
     description: z.string().max(200, "Description is too long").optional().or(z.literal('')),
 })
 
-// 2. Тип для стану форми
 export type DeviceState = {
     message?: string | null;
     errors?: {
@@ -33,11 +31,10 @@ export type DeviceState = {
         macAddress?: string[];
         description?: string[];
         relayTime?: string[];
-        relayType?: string[]; // Додали помилки для relayType
+        relayType?: string[];
     };
 }
 
-// Отримуємо пристрої тільки поточного адміністратора
 export async function getDevices() {
     const adminId = await verifySession()
     if (!adminId) return []
@@ -48,7 +45,6 @@ export async function getDevices() {
     })
 }
 
-// 3. Екшен редагування
 export async function updateDeviceAction(
     prevState: DeviceState,
     formData: FormData
@@ -60,7 +56,7 @@ export async function updateDeviceAction(
         id: formData.get('id') as string,
         name: formData.get('name') as string,
         relayTime: formData.get('relayTime'),
-        relayType: formData.get('relayType'), // Дістаємо тип реле
+        relayType: formData.get('relayType'),
     }
 
     const validated = updateDeviceSchema.safeParse(rawData)
@@ -75,16 +71,15 @@ export async function updateDeviceAction(
     const { id, name, relayTime, relayType } = validated.data
 
     try {
-        // Оновлюємо пристрій
         const result = await prisma.device.updateMany({
             where: {
                 id,
-                adminId // Перевіряємо, чи має право цей адмін оновлювати цей девайс
+                adminId
             },
             data: {
                 name,
                 relayTime,
-                relayType // Зберігаємо новий тип реле
+                relayType
             }
         })
 
@@ -95,12 +90,11 @@ export async function updateDeviceAction(
         revalidatePath('/dashboard/devices')
         revalidatePath('/dashboard/users/new')
         return { message: "Device updated successfully" }
-    } catch (e) {
+    } catch {
         return { message: "Database error: Failed to update device" }
     }
 }
 
-// 4. Екшен видалення
 export async function deleteDevice(formData: FormData) {
     const adminId = await verifySession()
     if (!adminId) return
@@ -118,12 +112,11 @@ export async function deleteDevice(formData: FormData) {
             }
         })
         revalidatePath('/dashboard/devices')
-    } catch (e) {
-        console.error('Delete failed', e)
+    } catch {
+        // Silently handled on server action
     }
 }
 
-// 5. Екшен створення пристрою
 export async function createDeviceAction(
     prevState: DeviceState,
     formData: FormData
@@ -156,7 +149,7 @@ export async function createDeviceAction(
                 description: description || null,
                 isOnline: false,
                 relayTime: 5,
-                relayType: "NO", // Дефолтний тип при створенні
+                relayType: "NO",
                 adminId,
             }
         });
@@ -169,7 +162,6 @@ export async function createDeviceAction(
                 };
             }
         }
-        console.error("Помилка створення пристрою:", error)
         return { message: "Database error: Failed to create device" };
     }
 

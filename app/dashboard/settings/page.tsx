@@ -15,10 +15,10 @@ export default async function SettingsPage() {
     if (!user) redirect('/login')
 
     return (
-        <div className="p-6 max-w-2xl mx-auto space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold text-white">Account Settings</h1>
-                <p className="text-dark-muted mt-1">Manage your security and profile preferences.</p>
+        <div className="p-6 md:p-8 max-w-xl mx-auto space-y-6">
+            <div className="pb-4 border-b border-slate-200">
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Account Settings</h1>
+                <p className="text-slate-500 text-sm mt-0.5">Manage security credentials and email login preferences.</p>
             </div>
 
             <SettingsClient user={{ email: user.email || '', role: user.role }} />

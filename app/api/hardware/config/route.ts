@@ -2,7 +2,7 @@ import { prisma } from '@/app/lib/prisma'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 0 // Додатковий вбивця кешу для Next.js 14+
+export const revalidate = 0
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
@@ -26,7 +26,6 @@ export async function GET(request: Request) {
             return new NextResponse('Device not found', { status: 404 })
         }
 
-        // Віддаємо конфігурацію з жорсткими заголовками заборони кешування
         return NextResponse.json({
             relayTime: device.relayTime,
             relayType: device.relayType

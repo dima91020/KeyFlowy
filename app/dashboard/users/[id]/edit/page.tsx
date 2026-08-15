@@ -1,9 +1,10 @@
 import { prisma } from '@/app/lib/prisma'
 import { notFound } from 'next/navigation'
-import { ChevronLeftIcon, ClockIcon, NoSymbolIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import { ChevronLeftIcon, ClockIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { EditUserForm } from './edit-form'
 import { verifySession } from '@/app/lib/session'
+import { Badge } from '@/app/ui/badge'
 
 export default async function EditUserPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -25,60 +26,52 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
     }
 
     return (
-        <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 md:space-y-8">
+        <div className="max-w-4xl mx-auto p-6 md:p-8 space-y-6">
             <Link
                 href="/dashboard/users"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-dark-muted hover:text-white transition-colors w-fit"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
             >
-                <ChevronLeftIcon className="w-4 h-4" />
-                <span>Back to List</span>
+                <ChevronLeftIcon className="w-3.5 h-3.5" /> Back to Users
             </Link>
 
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <h1 className="text-2xl md:text-3xl font-bold text-white flex flex-col md:flex-row md:items-center gap-2 md:gap-3 break-all">
-                    <span>Edit User:</span>
-                    <span className="text-primary">{user.name}</span>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-slate-200">
+                <h1 className="text-xl font-bold text-slate-900">
+                    Edit Profile: <span className="font-semibold text-slate-700">{user.name}</span>
                 </h1>
 
-                <div className={`shrink-0 px-4 py-2 rounded-xl border flex items-center gap-2 font-bold ${
-                    user.isActive
-                        ? 'bg-green-500/10 border-green-500/20 text-green-400'
-                        : 'bg-red-500/10 border-red-500/20 text-red-400'
-                }`}>
-                    {user.isActive ? <CheckCircleIcon className="w-5 h-5" /> : <NoSymbolIcon className="w-5 h-5" />}
-                    {user.isActive ? 'ACTIVE ACCESS' : 'ACCESS BLOCKED'}
-                </div>
+                <Badge variant={user.isActive ? 'success' : 'danger'} dot>
+                    {user.isActive ? 'Active Access' : 'Access Blocked'}
+                </Badge>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-                <div className="lg:col-span-2 bg-dark-800 border border-dark-700 rounded-2xl p-4 md:p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
                     <EditUserForm user={user} currentUserId={currentUserId} />
                 </div>
 
                 <div className="space-y-6">
-                    <div className="bg-dark-800 border border-dark-700 rounded-2xl p-4 md:p-6">
-                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <ClockIcon className="w-5 h-5 text-primary" /> Recent Access
+                    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                        <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                            <ClockIcon className="w-4 h-4 text-slate-400" /> Recent Passes
                         </h3>
 
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                             {user.logs.length === 0 ? (
-                                <p className="text-dark-muted text-sm">No activity recorded yet.</p>
+                                <p className="text-slate-400 text-xs">No activity recorded yet.</p>
                             ) : (
                                 user.logs.map(log => (
-                                    <div key={log.id} className="flex items-start gap-3 text-sm pb-3 border-b border-dark-700 last:border-0 last:pb-0">
-                                        <div className={`w-2 h-2 mt-1.5 rounded-full shrink-0 ${log.accessGranted ? 'bg-green-500' : 'bg-red-500'}`} />
-                                        <div className="overflow-hidden">
-                                            <p className="text-white font-medium truncate">
-                                                {log.accessGranted ? 'Access Granted' : 'Access Denied'}
-                                            </p>
-                                            <p className="text-xs text-dark-muted">
-                                                {new Date(log.timestamp).toLocaleString()}
-                                            </p>
-                                            <p className="text-xs text-dark-muted mt-0.5 truncate">
-                                                @ {log.device?.name || 'Unknown Device'}
-                                            </p>
+                                    <div key={log.id} className="text-xs pb-2.5 border-b border-slate-100 last:border-0 last:pb-0 space-y-0.5">
+                                        <div className="flex items-center justify-between">
+                                            <Badge size="sm" variant={log.accessGranted ? 'success' : 'danger'} dot>
+                                                {log.accessGranted ? 'Granted' : 'Denied'}
+                                            </Badge>
+                                            <span className="text-slate-400 font-mono">
+                                                {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
                                         </div>
+                                        <p className="text-slate-500 truncate">
+                                            {log.device?.name || 'Unknown Device'}
+                                        </p>
                                     </div>
                                 ))
                             )}

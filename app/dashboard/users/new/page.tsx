@@ -6,18 +6,12 @@ import {
     ChevronLeftIcon,
     ArrowDownTrayIcon,
     UserIcon,
-    BriefcaseIcon,
     CreditCardIcon,
     WifiIcon,
     ArrowPathIcon,
-    CpuChipIcon,
-    EnvelopeIcon,
-    MapPinIcon,
     CheckCircleIcon,
     ClipboardDocumentIcon,
-    LockOpenIcon,
     CalendarIcon,
-    ShieldCheckIcon,
     ClockIcon,
     XMarkIcon
 } from '@heroicons/react/24/outline'
@@ -74,7 +68,6 @@ export default function NewUserPage() {
     const [state, action, isPending] = useActionState(createUserAction, initialState)
 
     const [role, setRole] = useState<'USER' | 'GUEST'>('USER')
-
     const [isScanning, setIsScanning] = useState(false)
     const [scannedUid, setScannedUid] = useState('')
     const [devices, setDevices] = useState<DeviceOption[]>([])
@@ -88,8 +81,6 @@ export default function NewUserPage() {
 
     const socketRef = useRef<WebSocket | null>(null)
     const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-    const autofillFix = "[&:-webkit-autofill]:[-webkit-text-fill-color:white] [&:-webkit-autofill]:[transition:background-color_9999s_ease-in-out_0s]";
 
     useEffect(() => {
         getCurrentUserId().then(id => setCurrentUserId(id));
@@ -109,8 +100,6 @@ export default function NewUserPage() {
     useEffect(() => {
         const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080'
         const ws = new WebSocket(wsUrl);
-
-        ws.onopen = () => console.log('Frontend connected to WS');
 
         ws.onmessage = (event) => {
             try {
@@ -144,8 +133,8 @@ export default function NewUserPage() {
                         }
                     }
                 }
-            } catch (e) {
-                console.log('Non-JSON message');
+            } catch {
+                // Ignore malformed WS packets
             }
         };
 
@@ -158,7 +147,7 @@ export default function NewUserPage() {
 
     const handleScan = () => {
         if (!selectedDeviceMac) {
-            alert("No device selected! Please select a scanner.");
+            alert("No device selected! Please select an online scanner.");
             return;
         }
 
@@ -182,14 +171,12 @@ export default function NewUserPage() {
                 setIsScanning(true);
                 setScannedUid('');
 
-                const commandMsg = {
+                socketRef.current.send(JSON.stringify({
                     type: 'COMMAND',
                     target: selectedDeviceMac,
                     command: 'START_SCAN',
                     userId: currentUserId
-                };
-
-                socketRef.current.send(JSON.stringify(commandMsg));
+                }));
 
                 scanTimeoutRef.current = setTimeout(() => {
                     setIsScanning(false);
@@ -202,7 +189,7 @@ export default function NewUserPage() {
 
     const copyCredentials = () => {
         if (state.credentials) {
-            const text = `SecurePass Portal Access\nLogin: ${state.credentials.email}\nPassword: ${state.credentials.password}`
+            const text = `Smart ACS Portal Access\nLogin: ${state.credentials.email}\nPassword: ${state.credentials.password}`
             navigator.clipboard.writeText(text)
             setCopied(true)
             setTimeout(() => setCopied(false), 3000)
@@ -211,56 +198,47 @@ export default function NewUserPage() {
 
     if (state.success) {
         return (
-            <div className="p-6 max-w-2xl mx-auto space-y-6">
-                <div className="text-center mb-8 pt-8">
-                    <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/20 shadow-[0_0_30px_rgba(34,197,94,0.2)]">
-                        <CheckCircleIcon className="w-10 h-10 text-green-500" />
+            <div className="p-6 md:p-8 max-w-xl mx-auto space-y-6">
+                <div className="text-center pt-6">
+                    <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-200">
+                        <CheckCircleIcon className="w-6 h-6 text-emerald-600" />
                     </div>
-                    <h1 className="text-3xl font-bold text-white mb-2">
-                        {role === 'GUEST' ? 'Guest Pass Created!' : 'Employee Created!'}
+                    <h1 className="text-xl font-bold text-slate-900 mb-1">
+                        {role === 'GUEST' ? 'Guest Pass Created' : 'Employee Registered'}
                     </h1>
-                    <p className="text-dark-muted">
-                        {role === 'GUEST' ? 'The access card is now ready to use.' : 'Please securely send these login details to the new employee.'}
+                    <p className="text-xs text-slate-500">
+                        {role === 'GUEST' ? 'The card is active for the configured time window.' : 'Provide the generated credentials to the employee.'}
                     </p>
                 </div>
 
                 {state.credentials && role === 'USER' && (
-                    <div className="bg-dark-800 border border-dark-700 rounded-3xl p-8 relative overflow-hidden shadow-2xl">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-
-                        <div className="space-y-6 relative z-10">
-                            <div>
-                                <p className="text-xs text-dark-muted uppercase tracking-wider mb-2">Login (Email)</p>
-                                <div className="bg-dark-900 border border-dark-700 rounded-xl p-4 text-white font-mono flex justify-between items-center">
-                                    {state.credentials.email}
-                                </div>
+                    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+                        <div>
+                            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Email</span>
+                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-900 font-mono text-xs mt-1">
+                                {state.credentials.email}
                             </div>
-                            <div>
-                                <p className="text-xs text-dark-muted uppercase tracking-wider mb-2">Temporary Password</p>
-                                <div className="bg-dark-900 border border-dark-700 rounded-xl p-4 text-primary font-mono text-xl tracking-widest text-center">
-                                    {state.credentials.password}
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={copyCredentials}
-                                className={clsx(
-                                    "w-full py-4 rounded-xl transition-all flex items-center justify-center gap-2 border shadow-lg",
-                                    copied
-                                        ? "bg-green-500/10 hover:bg-green-500/20 text-green-400 border-green-500/20"
-                                        : "bg-primary hover:bg-blue-600 text-white border-blue-500 shadow-blue-500/20"
-                                )}
-                            >
-                                {copied ? <CheckCircleIcon className="w-5 h-5" /> : <ClipboardDocumentIcon className="w-5 h-5" />}
-                                {copied ? 'Copied to Clipboard!' : 'Copy Credentials'}
-                            </button>
                         </div>
+                        <div>
+                            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Temporary Password</span>
+                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-900 font-mono text-base tracking-widest text-center font-bold mt-1">
+                                {state.credentials.password}
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={copyCredentials}
+                            className="w-full py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium"
+                        >
+                            {copied ? <CheckCircleIcon className="w-4 h-4" /> : <ClipboardDocumentIcon className="w-4 h-4" />}
+                            {copied ? 'Copied to Clipboard!' : 'Copy Credentials'}
+                        </button>
                     </div>
                 )}
 
-                <div className="text-center pt-4">
-                    <Link href="/dashboard/users" className="text-dark-muted hover:text-white transition-colors border-b border-transparent hover:border-white pb-1">
-                        Return to Users List
+                <div className="text-center pt-2">
+                    <Link href="/dashboard/users" className="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors">
+                        ← Return to Users List
                     </Link>
                 </div>
             </div>
@@ -268,131 +246,108 @@ export default function NewUserPage() {
     }
 
     return (
-        <div className="p-6 max-w-2xl mx-auto">
+        <div className="p-6 md:p-8 max-w-xl mx-auto space-y-6">
             <Link
                 href="/dashboard/users"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-dark-muted hover:text-white mb-6 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
             >
-                <ChevronLeftIcon className="w-4 h-4" />
-                <span>Back to Users</span>
+                <ChevronLeftIcon className="w-3.5 h-3.5" /> Back to Users
             </Link>
 
-            <div className="bg-dark-800 border border-dark-700 rounded-3xl p-8 shadow-xl relative">
-                <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
-                    <div className="absolute top-0 right-0 p-8 opacity-5">
-                        <UserIcon className="w-32 h-32" />
-                    </div>
-                </div>
-
-                <div className="mb-8 relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                <div className="flex items-center justify-between pb-5 mb-5 border-b border-slate-100">
                     <div>
-                        <h1 className="text-2xl font-bold text-white">Create Profile</h1>
-                        <p className="text-dark-muted mt-1">Register a person and assign an access card.</p>
+                        <h1 className="text-xl font-bold text-slate-900">New User</h1>
+                        <p className="text-xs text-slate-500 mt-0.5">Register a person and bind an RFID pass.</p>
                     </div>
 
-                    <div className="flex bg-dark-900 p-1 rounded-xl border border-dark-700">
+                    <div className="flex bg-slate-100 p-1 rounded-lg">
                         <button
                             type="button"
                             onClick={() => setRole('USER')}
                             className={clsx(
-                                "px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2",
-                                role === 'USER' ? "bg-dark-700 text-white shadow-sm" : "text-dark-muted hover:text-gray-300"
+                                "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                                role === 'USER' ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"
                             )}
                         >
-                            <UserIcon className="w-4 h-4" /> Employee
+                            Employee
                         </button>
                         <button
                             type="button"
                             onClick={() => setRole('GUEST')}
                             className={clsx(
-                                "px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2",
-                                role === 'GUEST' ? "bg-dark-700 text-white shadow-sm" : "text-dark-muted hover:text-gray-300"
+                                "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                                role === 'GUEST' ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"
                             )}
                         >
-                            <ShieldCheckIcon className="w-4 h-4" /> Guest
+                            Guest
                         </button>
                     </div>
                 </div>
 
-                <form action={action} className="space-y-6 relative z-10">
+                <form action={action} className="space-y-4">
                     <input type="hidden" name="role" value={role} />
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div className="space-y-1.5">
-                            <label className="text-sm text-gray-300 ml-1">Full Name</label>
-                            <div className="relative">
-                                <UserIcon className="absolute left-3 top-3.5 text-dark-muted w-5 h-5" />
-                                <input
-                                    name="name"
-                                    defaultValue={state.inputs?.name as string}
-                                    placeholder="John Doe"
-                                    className={clsx(
-                                        "w-full bg-dark-900 border rounded-xl pl-10 pr-4 py-3 outline-none focus:border-primary transition-colors text-white",
-                                        autofillFix,
-                                        state.errors?.name ? "border-red-500" : "border-dark-700"
-                                    )}
-                                />
-                            </div>
-                            {state.errors?.name && <p className="text-red-400 text-xs ml-1">{state.errors.name[0]}</p>}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-700">Full Name</label>
+                            <input
+                                name="name"
+                                defaultValue={state.inputs?.name as string}
+                                placeholder="John Doe"
+                                className={clsx(
+                                    "w-full bg-slate-50 border rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-colors",
+                                    state.errors?.name ? "border-rose-400" : "border-slate-200"
+                                )}
+                            />
+                            {state.errors?.name && <p className="text-rose-600 text-xs">{state.errors.name[0]}</p>}
                         </div>
 
-                        <div className="space-y-1.5">
-                            <label className="text-sm text-gray-300 ml-1">
-                                {role === 'USER' ? 'Job Title' : 'Note / Company'}
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-700">
+                                {role === 'USER' ? 'Job Title' : 'Note / Organization'}
                             </label>
-                            <div className="relative">
-                                <BriefcaseIcon className="absolute left-3 top-3.5 text-dark-muted w-5 h-5" />
-                                <input
-                                    name="jobTitle"
-                                    defaultValue={state.inputs?.jobTitle as string}
-                                    placeholder={role === 'USER' ? "Developer" : "Visiting for maintenance"}
-                                    className={clsx(
-                                        "w-full bg-dark-900 border border-dark-700 rounded-xl pl-10 pr-4 py-3 outline-none focus:border-primary transition-colors text-white",
-                                        autofillFix
-                                    )}
-                                />
-                            </div>
+                            <input
+                                name="jobTitle"
+                                defaultValue={state.inputs?.jobTitle as string}
+                                placeholder={role === 'USER' ? "Software Engineer" : "Client Meeting"}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-colors"
+                            />
                         </div>
                     </div>
 
                     {role === 'USER' && (
-                        <div className="space-y-1.5">
-                            <label className="text-sm text-gray-300 ml-1">Email Address <span className="text-red-400">*</span></label>
-                            <div className="relative">
-                                <EnvelopeIcon className="absolute left-3 top-3.5 text-dark-muted w-5 h-5" />
-                                <input
-                                    name="email"
-                                    type="email"
-                                    defaultValue={state.inputs?.email as string}
-                                    placeholder="Used for employee login portal"
-                                    className={clsx(
-                                        "w-full bg-dark-900 border rounded-xl pl-10 pr-4 py-3 outline-none focus:border-primary transition-colors text-white",
-                                        autofillFix,
-                                        state.errors?.email ? "border-red-500" : "border-dark-700"
-                                    )}
-                                />
-                            </div>
-                            {state.errors?.email && <p className="text-red-400 text-xs ml-1">{state.errors.email[0]}</p>}
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-700">Email Address <span className="text-rose-500">*</span></label>
+                            <input
+                                name="email"
+                                type="email"
+                                defaultValue={state.inputs?.email as string}
+                                placeholder="name@company.com"
+                                className={clsx(
+                                    "w-full bg-slate-50 border rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-colors",
+                                    state.errors?.email ? "border-rose-400" : "border-slate-200"
+                                )}
+                            />
+                            {state.errors?.email && <p className="text-rose-600 text-xs">{state.errors.email[0]}</p>}
                         </div>
                     )}
 
                     {role === 'GUEST' && (
                         <div className="pt-2">
-                            <h3 className="text-sm text-white flex items-center gap-2 mb-3 ml-1">
-                                <ClockIcon className="text-yellow-500 w-4 h-4" /> Time Restrictions
-                            </h3>
+                            <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-2">
+                                <ClockIcon className="w-4 h-4 text-slate-400" /> Pass Validity Window
+                            </label>
 
-                            <div className="grid grid-cols-1 gap-5 bg-dark-900/50 p-5 rounded-2xl border border-dark-700/50">
-                                <div className="space-y-2">
-                                    <label className="text-xs text-dark-muted flex items-center gap-1.5">
-                                        Valid From
-                                    </label>
-                                    <div className="grid grid-cols-[1fr_105px] gap-2">
+                            <div className="grid grid-cols-1 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                <div className="space-y-1">
+                                    <span className="text-[11px] font-medium text-slate-500">Valid From</span>
+                                    <div className="grid grid-cols-[1fr_95px] gap-2">
                                         <CustomSelect
                                             name="validFromDate"
                                             options={dateOptions}
                                             defaultValue={state.inputs?.validFromDate as string || dateOptions[0].value}
-                                            icon={<CalendarIcon className="w-4 h-4" />}
+                                            icon={<CalendarIcon className="w-3.5 h-3.5" />}
                                         />
                                         <CustomSelect
                                             name="validFromTime"
@@ -402,16 +357,14 @@ export default function NewUserPage() {
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-xs text-dark-muted flex items-center gap-1.5">
-                                        Valid Until
-                                    </label>
-                                    <div className="grid grid-cols-[1fr_105px] gap-2">
+                                <div className="space-y-1">
+                                    <span className="text-[11px] font-medium text-slate-500">Valid Until</span>
+                                    <div className="grid grid-cols-[1fr_95px] gap-2">
                                         <CustomSelect
                                             name="validUntilDate"
                                             options={dateOptions}
                                             defaultValue={state.inputs?.validUntilDate as string || dateOptions[1].value}
-                                            icon={<CalendarIcon className="w-4 h-4" />}
+                                            icon={<CalendarIcon className="w-3.5 h-3.5" />}
                                         />
                                         <CustomSelect
                                             name="validUntilTime"
@@ -419,49 +372,44 @@ export default function NewUserPage() {
                                             defaultValue={state.inputs?.validUntilTime as string || '18:00'}
                                         />
                                     </div>
-                                    {state.errors?.validUntilTime && <p className="text-red-400 text-xs">{state.errors.validUntilTime[0]}</p>}
+                                    {state.errors?.validUntilTime && <p className="text-rose-600 text-xs">{state.errors.validUntilTime[0]}</p>}
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    <div className="pt-4 border-t border-dark-700 space-y-4">
-                        <div className="p-4 bg-dark-900/50 rounded-xl border border-dark-700/50 space-y-3">
-                            <label className="text-sm text-gray-300 flex items-center gap-2">
-                                <CpuChipIcon className="text-primary w-4 h-4" />
-                                Select Scanner Device
-                            </label>
-
+                    <div className="pt-3 border-t border-slate-100 space-y-3">
+                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1.5">
+                            <label className="text-xs font-semibold text-slate-700">Live Hardware Scanner</label>
                             {devices.length > 0 ? (
                                 <CustomSelect
                                     options={devices.map(d => ({ value: d.macAddress, label: `${d.name} (Online)` }))}
                                     defaultValue={selectedDeviceMac || devices[0].macAddress}
                                     onChange={setSelectedDeviceMac}
-                                    icon={<WifiIcon className="w-4 h-4" />}
+                                    icon={<WifiIcon className="w-3.5 h-3.5" />}
                                 />
                             ) : (
-                                <div className="text-sm text-yellow-500/80 bg-yellow-500/10 px-4 py-3 rounded-xl border border-yellow-500/20 flex items-center gap-2">
-                                    <ArrowPathIcon className="w-4 h-4 animate-spin" />
-                                    Searching for online devices...
+                                <div className="text-xs text-slate-500 bg-white px-3 py-2 rounded-lg border border-slate-200 flex items-center gap-2">
+                                    <ArrowPathIcon className="w-3.5 h-3.5 animate-spin text-slate-400" />
+                                    No online reader nodes found. You can still enter the UID manually.
                                 </div>
                             )}
                         </div>
 
-                        <div className="space-y-1.5">
-                            <label className="text-sm text-gray-300 ml-1">Access Card UID</label>
-                            <div className="flex gap-3">
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-700">Access Card UID</label>
+                            <div className="flex gap-2">
                                 <div className="relative flex-1">
-                                    <CreditCardIcon className="absolute left-3 top-3.5 text-dark-muted w-5 h-5" />
+                                    <CreditCardIcon className="absolute left-3 top-2.5 text-slate-400 w-4 h-4" />
                                     <input
                                         name="cardUid"
                                         id="cardUidInput"
                                         defaultValue={scannedUid || (state.inputs?.cardUid as string)}
-                                        placeholder={isScanning ? "Waiting for scan..." : "Scan or enter manually"}
+                                        placeholder={isScanning ? "Tap card on reader..." : "e.g. 1A2B3C4D"}
                                         className={clsx(
-                                            "w-full bg-dark-900 border rounded-xl pl-10 pr-4 py-3 transition-all outline-none font-mono tracking-wider uppercase text-white",
-                                            autofillFix,
-                                            state.errors?.cardUid ? "border-red-500" : "border-dark-700 focus:border-primary",
-                                            isScanning && "border-yellow-500/50 bg-yellow-500/5"
+                                            "w-full bg-slate-50 border rounded-lg pl-9 pr-3 py-2 text-xs font-mono uppercase tracking-wider text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-colors",
+                                            state.errors?.cardUid ? "border-rose-400" : "border-slate-200",
+                                            isScanning && "border-amber-400 bg-amber-50"
                                         )}
                                     />
                                 </div>
@@ -471,74 +419,57 @@ export default function NewUserPage() {
                                     onClick={handleScan}
                                     disabled={devices.length === 0}
                                     className={clsx(
-                                        "px-6 rounded-xl flex items-center gap-2 transition-all border",
+                                        "px-4 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors border",
                                         isScanning
-                                            ? "bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/20"
+                                            ? "bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200"
                                             : devices.length === 0
-                                                ? "bg-dark-700 text-dark-muted border-dark-600 cursor-not-allowed"
-                                                : "bg-primary/20 hover:bg-primary/30 text-primary border-primary/30"
+                                                ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                                                : "bg-slate-900 hover:bg-slate-800 text-white border-slate-900"
                                     )}
                                 >
-                                    {isScanning ? <XMarkIcon className="w-5 h-5" /> : <WifiIcon className="w-5 h-5" />}
-                                    <span className="hidden sm:inline">
-                                        {isScanning ? 'Cancel' : 'Scan'}
-                                    </span>
+                                    {isScanning ? <XMarkIcon className="w-4 h-4" /> : <WifiIcon className="w-4 h-4" />}
+                                    <span>{isScanning ? 'Cancel' : 'Scan'}</span>
                                 </button>
                             </div>
-                            {state.errors?.cardUid && <p className="text-red-400 text-xs ml-1">{state.errors.cardUid[0]}</p>}
+                            {state.errors?.cardUid && <p className="text-rose-600 text-xs">{state.errors.cardUid[0]}</p>}
                         </div>
                     </div>
 
-                    {role === 'USER' && (
-                        <div className="flex items-center justify-between bg-dark-900 p-4 rounded-xl border border-dark-700">
-                            <div>
-                                <h3 className="text-white flex items-center gap-2 text-sm">
-                                    <MapPinIcon className="w-4 h-4 text-blue-400" />
-                                    Initial Location Status
-                                </h3>
-                                <p className="text-sm text-dark-muted">
-                                    Auto-detects based on the reader used during scan.
-                                </p>
-                            </div>
-
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" name="isInside" id="isInsideCheckbox" defaultChecked={false} className="sr-only peer" />
-                                <div className="w-11 h-6 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
-                            </label>
-                        </div>
-                    )}
-
-                    <div className="space-y-1.5 pt-4 border-t border-dark-700">
-                        <label className="text-sm text-gray-300 ml-1">Assign Access Points (Doors)</label>
+                    <div className="space-y-1 pt-3 border-t border-slate-100">
+                        <label className="text-xs font-semibold text-slate-700">Assign Permitted Access Points</label>
                         <MultiSelect
                             name="deviceIds"
-                            placeholder="Select allowed doors..."
-                            icon={<LockOpenIcon className="w-5 h-5" />}
+                            placeholder="Select permitted doors..."
                             options={allDevices.map(d => ({
                                 value: d.id,
                                 label: `${d.name} ${!d.isOnline ? '(Offline)' : ''}`
                             }))}
                         />
-                        {state.errors?.deviceIds && <p className="text-red-400 text-xs ml-1">{state.errors.deviceIds[0]}</p>}
+                        {state.errors?.deviceIds && <p className="text-rose-600 text-xs">{state.errors.deviceIds[0]}</p>}
                     </div>
 
                     {state.message && !state.success && (
-                        <div className="text-red-400 text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20">
+                        <div className="text-rose-700 text-xs bg-rose-50 p-2.5 rounded-lg border border-rose-200">
                             {state.message}
                         </div>
                     )}
 
-                    <div className="pt-4 flex justify-end">
+                    <div className="pt-3 flex justify-end gap-3">
+                        <Link
+                            href="/dashboard/users"
+                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs font-medium transition-colors"
+                        >
+                            Cancel
+                        </Link>
                         <button
                             type="submit"
                             disabled={isPending || isScanning}
-                            className="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 disabled:opacity-50 w-full sm:w-auto justify-center"
+                            className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 disabled:opacity-50"
                         >
-                            {isPending ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <ArrowDownTrayIcon className="w-5 h-5" />}
-                            {isPending ? 'Saving...' : (role === 'USER' ? 'Create Employee' : 'Create Guest Pass')}
+                            {isPending ? <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" /> : <ArrowDownTrayIcon className="w-3.5 h-3.5" />}
+                            {isPending ? 'Saving...' : (role === 'USER' ? 'Save Employee' : 'Save Guest Pass')}
                         </button>
                     </div>
-
                 </form>
             </div>
         </div>

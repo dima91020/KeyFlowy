@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
 import { menuItems } from './sidebar'
 import { logoutAction } from '../login/actions'
-import { Bars3Icon, XMarkIcon, ArrowRightStartOnRectangleIcon } from '@heroicons/react/24/outline'
+import { Bars3Icon, XMarkIcon, ArrowRightStartOnRectangleIcon, ShieldCheckIcon } from '@heroicons/react/24/outline'
 
 export function MobileSidebar() {
     const [isOpen, setIsOpen] = useState(false)
@@ -34,8 +34,8 @@ export function MobileSidebar() {
 
     if (!mounted) {
         return (
-            <button className="md:hidden text-dark-muted p-2 -ml-2 outline-none focus:outline-none focus:ring-0 [-webkit-tap-highlight-color:transparent]">
-                <Bars3Icon className="w-6 h-6" />
+            <button className="md:hidden text-slate-500 p-2 -ml-2">
+                <Bars3Icon className="w-5 h-5" />
             </button>
         )
     }
@@ -43,25 +43,30 @@ export function MobileSidebar() {
     const sidebarContent = (
         <>
             <div
-                className="fixed inset-0 bg-black/60 z-[9999] backdrop-blur-sm md:hidden animate-fade-in"
+                className="fixed inset-0 bg-slate-900/40 z-[9999] backdrop-blur-xs md:hidden"
                 onClick={() => setIsOpen(false)}
             />
 
             <div className={clsx(
-                "fixed top-0 left-0 h-full w-72 bg-dark-800 border-r border-dark-700 z-[10000] transform transition-transform duration-300 ease-in-out md:hidden flex flex-col shadow-2xl",
+                "fixed top-0 left-0 h-full w-64 bg-white border-r border-slate-200 z-[10000] transform transition-transform duration-200 ease-in-out md:hidden flex flex-col shadow-xl",
                 isOpen ? "translate-x-0" : "-translate-x-full"
             )}>
-                <div className="h-16 flex items-center justify-between px-6 border-b border-dark-700">
-                    <span className="text-xl font-bold text-white tracking-tight">Smart ACS</span>
+                <div className="h-14 flex items-center justify-between px-5 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 bg-slate-900 rounded-lg flex items-center justify-center text-white">
+                            <ShieldCheckIcon className="w-4 h-4" />
+                        </div>
+                        <span className="text-base font-bold text-slate-900 tracking-tight">Smart ACS</span>
+                    </div>
                     <button
                         onClick={() => setIsOpen(false)}
-                        className="text-dark-muted hover:text-white transition-colors outline-none focus:outline-none focus:ring-0 [-webkit-tap-highlight-color:transparent]"
+                        className="text-slate-400 hover:text-slate-700 p-1"
                     >
-                        <XMarkIcon className="w-6 h-6" />
+                        <XMarkIcon className="w-5 h-5" />
                     </button>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+                <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
                     {menuItems.map((item) => {
                         const isActive = pathname === item.href
                         return (
@@ -70,27 +75,26 @@ export function MobileSidebar() {
                                 href={item.href}
                                 onClick={() => setIsOpen(false)}
                                 className={clsx(
-                                    "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl select-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 [-webkit-tap-highlight-color:transparent]",
+                                    "flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
                                     isActive
-                                        ? "bg-primary text-white shadow-lg shadow-blue-500/20"
-                                        : "text-dark-muted hover:bg-dark-700 hover:text-white"
+                                        ? "bg-slate-900 text-white"
+                                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                                 )}
                             >
-                                {/* Змінили size={20} на className="w-5 h-5" для сумісності з Heroicons */}
-                                <item.icon className="w-5 h-5" />
+                                <item.icon className="w-4 h-4 shrink-0" />
                                 {item.name}
                             </Link>
                         )
                     })}
                 </nav>
 
-                <div className="p-4 border-t border-dark-700">
+                <div className="p-3 border-t border-slate-100">
                     <form action={logoutAction}>
                         <button
                             type="submit"
-                            className="flex items-center gap-3 px-4 py-3 w-full text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-xl outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 [-webkit-tap-highlight-color:transparent]"
+                            className="flex items-center gap-2.5 px-3 py-2 w-full text-sm font-medium text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                         >
-                            <ArrowRightStartOnRectangleIcon className="w-5 h-5" />
+                            <ArrowRightStartOnRectangleIcon className="w-4 h-4" />
                             Sign Out
                         </button>
                     </form>
@@ -103,9 +107,9 @@ export function MobileSidebar() {
         <>
             <button
                 onClick={() => setIsOpen(true)}
-                className="md:hidden text-dark-muted hover:text-white p-2 -ml-2 transition-colors outline-none focus:outline-none focus:ring-0 [-webkit-tap-highlight-color:transparent]"
+                className="md:hidden text-slate-500 hover:text-slate-900 p-1.5 -ml-2 transition-colors"
             >
-                <Bars3Icon className="w-6 h-6" />
+                <Bars3Icon className="w-5 h-5" />
             </button>
 
             {isOpen && createPortal(sidebarContent, document.body)}

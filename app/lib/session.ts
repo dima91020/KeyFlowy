@@ -1,7 +1,10 @@
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 
-const secretKey = process.env.JWT_SECRET || 'super-secret-diploma-key-change-me'
+const secretKey = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'dev-secret-access-control-key-32-chars-min')
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required in production')
+}
 const key = new TextEncoder().encode(secretKey)
 
 export async function createSession(userId: string) {
