@@ -206,8 +206,8 @@ NEXT_PUBLIC_WS_URL="ws://localhost:8080"
 ### 2. Installation
 ```bash
 # Clone repository
-git clone https://github.com/dima91020/diploma-access-control.git
-cd diploma-access-control
+git clone https://github.com/dima91020/KeyFlowy.git
+cd KeyFlowy
 
 # Install dependencies
 pnpm install
@@ -350,5 +350,4 @@ pnpm test
 
 ## License & Authors
 
-Developed for Academic Diploma Project.
 Published under the **MIT License**.
